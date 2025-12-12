@@ -1,0 +1,23 @@
+{
+  "name": "rask-app",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:rules": "firebase deploy --only firestore:rules"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.17",
+    "firebase": "^12.6.0",
+    "rask-ui": "^0.26.1",
+    "tailwindcss": "^4.1.17"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^6.0.3"
+  }
+}

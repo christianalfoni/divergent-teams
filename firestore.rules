@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Rules for todos within an organization
+    match /organizations/{organizationId}/todos/{todoId} {
+
+      // Helper function to check if user belongs to the organization
+      function isOrgMember() {
+        return request.auth != null
+          && request.auth.token.organizationId == organizationId;
+      }
+
+      // Helper function to check if user owns the todo (for existing docs)
+      function isOwner() {
+        return resource.data.userId == request.auth.uid;
+      }
+
+      // Helper function to check if user is creating their own todo
+      function isCreatingOwnTodo() {
+        return request.resource.data.userId == request.auth.uid;
+      }
+
+      // Allow read if user is org member and owns the todo
+      allow read: if isOrgMember() && isOwner();
+
+      // Allow create if user is org member and creating their own todo
+      allow create: if isOrgMember() && isCreatingOwnTodo();
+
+      // Allow update/delete if user is org member and owns the todo
+      allow update, delete: if isOrgMember() && isOwner();
+    }
+  }
+}
