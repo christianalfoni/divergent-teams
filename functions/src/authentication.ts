@@ -94,11 +94,9 @@ export const createBeforeSignIn = beforeUserSignedIn(
       const userDoc = await userRef.get();
 
       const userData = {
-        uid: user.uid,
         email: user.email,
         displayName: displayName,
         photoURL: photoURL,
-        orgId: organizationId, // Useful to have the ID inside the doc as well
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       };
 

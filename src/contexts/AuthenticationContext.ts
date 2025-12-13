@@ -11,21 +11,31 @@ import {
   OAuthProvider,
   onAuthStateChanged,
   signInWithPopup,
-  type User,
+  type User as FirebaseUser,
 } from "firebase/auth";
+import { collection, doc, getDoc } from "firebase/firestore";
+import type { User } from "../types";
 
 type AuthenticationState =
   | {
       isAuthenticating: true;
       user: null;
+      error: null;
     }
   | {
       isAuthenticating: false;
       user: null;
+      error: null;
     }
   | {
       isAuthenticating: false;
-      user: User;
+      user: User & { organizationId: string };
+      error: null;
+    }
+  | {
+      isAuthenticating: false;
+      user: null;
+      error: string;
     };
 
 export const AuthenticationContext = createContext(() => {
@@ -33,6 +43,7 @@ export const AuthenticationContext = createContext(() => {
   const state = useState<AuthenticationState>({
     isAuthenticating: true,
     user: null,
+    error: null,
   });
   const [loginState, login] = useAction(handleLogin);
   const disposeOnAuthChanged = onAuthStateChanged(
@@ -49,16 +60,50 @@ export const AuthenticationContext = createContext(() => {
     },
   });
 
-  function handleOnAuthChanged(user: User | null) {
-    if (user) {
-      assignState(state, {
-        isAuthenticating: false,
-        user,
-      });
-    } else {
+  async function handleOnAuthChanged(firebaseUser: FirebaseUser | null) {
+    if (!firebaseUser) {
       assignState(state, {
         isAuthenticating: false,
         user: null,
+        error: null,
+      });
+      return;
+    }
+
+    try {
+      const idTokenResult = await firebaseUser.getIdTokenResult(true);
+
+      if (typeof idTokenResult.claims.organizationId !== "string") {
+        throw new Error("No organization id claim found on user");
+      }
+
+      const organizationId = idTokenResult.claims.organizationId;
+      const usersCollection = collection(
+        firebase.firestore,
+        "organizations",
+        organizationId,
+        "users"
+      );
+      const userDocRef = doc(usersCollection, firebaseUser.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        throw new Error("Can not find user document in Firestore");
+      }
+
+      assignState(state, {
+        isAuthenticating: false,
+        user: {
+          ...(userDoc.data() as User),
+          organizationId,
+        },
+        error: null,
+      });
+    } catch (error) {
+      assignState(state, {
+        isAuthenticating: false,
+        user: null,
+        error: String(error),
       });
     }
   }
@@ -66,7 +111,6 @@ export const AuthenticationContext = createContext(() => {
   async function handleLogin() {
     const provider = new OAuthProvider("oidc.workos");
 
-    console.log("ORG ID", import.meta.env.VITE_WORK_OS_ORGANIZATION_ID);
     provider.setCustomParameters({
       organization: import.meta.env.VITE_WORK_OS_ORGANIZATION_ID,
     });
@@ -74,6 +118,7 @@ export const AuthenticationContext = createContext(() => {
     assignState(state, {
       isAuthenticating: true,
       user: null,
+      error: null,
     });
 
     try {
@@ -82,6 +127,7 @@ export const AuthenticationContext = createContext(() => {
       assignState(state, {
         isAuthenticating: false,
         user: null,
+        error: null,
       });
 
       throw error;

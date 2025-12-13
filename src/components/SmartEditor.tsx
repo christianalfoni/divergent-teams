@@ -524,12 +524,6 @@ export function SmartEditor(props: Props) {
         .line-through .tag-pill {
           text-decoration: line-through;
         }
-        .mention-person::before,
-        .mention-project::before,
-        .mention-issue::before {
-          content: "@";
-          font-weight: 700;
-        }
         .mention-person,
         .mention-project,
         .mention-issue {

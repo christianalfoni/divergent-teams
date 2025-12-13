@@ -1,75 +1,6 @@
 import { useEffect, useState } from "rask-ui";
 import TodoItem from "./TodoItem";
 
-// Mock todo data with tags, URLs, and mentions
-const mockTodos = {
-  0: [
-    // Monday
-    {
-      id: "1",
-      text: 'Report back to <span data-mention="person" data-name="john" class="tag-pill mention-person" contenteditable="false">john</span> on backend tier issues <span data-tag="urgent" class="tag-pill tag-pill-red" contenteditable="false">urgent</span> <span data-tag="backend" class="tag-pill tag-pill-blue" contenteditable="false">backend</span>',
-      completed: false,
-    },
-    {
-      id: "2",
-      text: 'Follow-up on <span data-mention="issue" data-issue="42" class="tag-pill mention-issue" contenteditable="false">42</span> with sdk book session <span data-url="https://docs.example.com/sdk" class="smartlink-chip" contenteditable="false">docs.example.com</span> <span data-tag="followup" class="tag-pill tag-pill-yellow" contenteditable="false">followup</span>',
-      completed: true,
-    },
-    {
-      id: "3",
-      text: 'Fix pension amount in <span data-mention="project" data-name="payroll-system" class="tag-pill mention-project" contenteditable="false">payroll-system</span>, now it is 7000, should be 9000 <span data-tag="finance" class="tag-pill tag-pill-green" contenteditable="false">finance</span>',
-      completed: true,
-    },
-  ],
-  1: [
-    // Tuesday
-    {
-      id: "4",
-      text: 'Ask <span data-mention="person" data-name="kirsh" class="tag-pill mention-person" contenteditable="false">kirsh</span> about file write error in <span data-mention="project" data-name="uncommon-api" class="tag-pill mention-project" contenteditable="false">uncommon-api</span> <span data-url="https://github.com/project/issues/42" class="smartlink-chip" contenteditable="false">github.com</span> <span data-tag="bug" class="tag-pill tag-pill-red" contenteditable="false">bug</span>',
-      completed: false,
-    },
-    {
-      id: "5",
-      text: 'Review team progress on Q4 goals with <span data-mention="person" data-name="sarah" class="tag-pill mention-person" contenteditable="false">sarah</span> <span data-tag="planning" class="tag-pill tag-pill-purple" contenteditable="false">planning</span> <span data-tag="review" class="tag-pill tag-pill-blue" contenteditable="false">review</span>',
-      completed: false,
-    },
-  ],
-  2: [
-    // Wednesday
-    {
-      id: "6",
-      text: 'Team standup at 10am <span data-tag="meeting" class="tag-pill tag-pill-indigo" contenteditable="false">meeting</span>',
-      completed: true,
-    },
-    {
-      id: "7",
-      text: 'Update documentation for <span data-mention="project" data-name="new-api" class="tag-pill mention-project" contenteditable="false">new-api</span> <span data-url="https://api-docs.company.com" class="smartlink-chip" contenteditable="false">api-docs.company.com</span> <span data-tag="docs" class="tag-pill tag-pill-green" contenteditable="false">docs</span>',
-      completed: false,
-    },
-  ],
-  3: [
-    // Thursday
-    {
-      id: "8",
-      text: 'Client meeting at 2pm with <span data-mention="person" data-name="mike" class="tag-pill mention-person" contenteditable="false">mike</span> <span data-url="https://zoom.us/j/123456789" class="smartlink-chip" contenteditable="false">zoom.us</span> <span data-tag="meeting" class="tag-pill tag-pill-indigo" contenteditable="false">meeting</span> <span data-tag="client" class="tag-pill tag-pill-pink" contenteditable="false">client</span>',
-      completed: false,
-    },
-  ],
-  4: [
-    // Friday
-    {
-      id: "9",
-      text: 'Code review session for <span data-mention="project" data-name="mobile-app" class="tag-pill mention-project" contenteditable="false">mobile-app</span> <span data-tag="review" class="tag-pill tag-pill-blue" contenteditable="false">review</span>',
-      completed: false,
-    },
-    {
-      id: "10",
-      text: 'Deploy <span data-mention="project" data-name="staging-env" class="tag-pill mention-project" contenteditable="false">staging-env</span> environment <span data-url="https://staging.example.com" class="smartlink-chip" contenteditable="false">staging.example.com</span> <span data-tag="deployment" class="tag-pill tag-pill-yellow" contenteditable="false">deployment</span>',
-      completed: false,
-    },
-  ],
-};
-
 export function Calendar() {
   // Generate the current week's weekdays (Monday - Friday)
   const getWeekdays = () => {
@@ -248,7 +179,7 @@ export function Calendar() {
                         "opacity 350ms cubic-bezier(0.4, 0.0, 0.2, 1)",
                     }}
                   >
-                    {mockTodos[index]?.map((todo) => (
+                    {[].map((todo) => (
                       <TodoItem
                         key={todo.id}
                         todo={todo}

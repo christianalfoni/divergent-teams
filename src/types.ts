@@ -19,9 +19,8 @@ export interface Organization {
   name: string;
 }
 
-export interface Profile {
+export interface User {
   id: string;
-  userId: string;
   email: string;
   displayName: string | null;
   photoURL: string | null;
