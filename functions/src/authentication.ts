@@ -16,7 +16,7 @@ import * as admin from "firebase-admin";
  * This function runs BEFORE the user gets their session cookie/token
  * It handles:
  * 1. Setting custom claims for organization ID from WorkOS
- * 2. Ensuring the user has a profile record in Firestore
+ * 2. Ensuring the user has a user record in Firestore
  */
 export const createBeforeSignIn = beforeUserSignedIn(
   {
@@ -68,8 +68,8 @@ export const createBeforeSignIn = beforeUserSignedIn(
     // Define the reference to the Organization document
     const orgRef = db.collection("organizations").doc(organizationId);
 
-    // Define the reference to the User Profile (Subcollection of Organization)
-    const userProfileRef = orgRef.collection("profiles").doc(user.uid);
+    // Define the reference to the User (Subcollection of Organization)
+    const userRef = orgRef.collection("users").doc(user.uid);
 
     try {
       // Run as a transaction or batch to ensure consistency
@@ -90,10 +90,10 @@ export const createBeforeSignIn = beforeUserSignedIn(
         );
       }
 
-      // B. Handle the Profile Document
-      const profileDoc = await userProfileRef.get();
+      // B. Handle the User Document
+      const userDoc = await userRef.get();
 
-      const profileData = {
+      const userData = {
         uid: user.uid,
         email: user.email,
         displayName: displayName,
@@ -102,20 +102,20 @@ export const createBeforeSignIn = beforeUserSignedIn(
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       };
 
-      if (!profileDoc.exists) {
-        // Create new profile in the subcollection
-        await userProfileRef.set({
-          ...profileData,
+      if (!userDoc.exists) {
+        // Create new user in the subcollection
+        await userRef.set({
+          ...userData,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
-        logger.info("Created new profile in org subcollection", {
+        logger.info("Created new user in org subcollection", {
           uid: user.uid,
           orgId: organizationId,
         });
       } else {
-        // Update existing profile
-        await userProfileRef.update(profileData);
-        logger.info("Updated profile in org subcollection", {
+        // Update existing user
+        await userRef.update(userData);
+        logger.info("Updated user in org subcollection", {
           uid: user.uid,
           orgId: organizationId,
         });
