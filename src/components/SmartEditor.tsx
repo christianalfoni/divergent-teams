@@ -508,6 +508,8 @@ export function SmartEditor(props: Props) {
           opacity: 0.6;
         }
         .tag-pill {
+          position: relative;
+          top: -1px;
           display: inline-flex;
           align-items: center;
           padding: 0px 6px;
@@ -517,9 +519,37 @@ export function SmartEditor(props: Props) {
           user-select: none;
           font-size: 0.75rem;
           font-weight: 500;
+          vertical-align: baseline;
         }
         .line-through .tag-pill {
           text-decoration: line-through;
+        }
+        .mention-person::before,
+        .mention-project::before,
+        .mention-issue::before {
+          content: "@";
+          font-weight: 700;
+        }
+        .mention-person,
+        .mention-project,
+        .mention-issue {
+          display: inline;
+          padding: 0;
+          border-radius: 0;
+          background: transparent;
+          margin: 0;
+          font-weight: 600;
+          position: static;
+          top: auto;
+        }
+        .mention-person {
+          color: rgb(133 77 14);
+        }
+        .mention-project {
+          color: rgb(185 28 28);
+        }
+        .mention-issue {
+          color: rgb(21 128 61);
         }
         .tag-pill-gray {
           background: rgb(243 244 246);
@@ -554,6 +584,15 @@ export function SmartEditor(props: Props) {
           color: rgb(190 24 93);
         }
         @media (prefers-color-scheme: dark) {
+          .mention-person {
+            color: rgb(234 179 8);
+          }
+          .mention-project {
+            color: rgb(248 113 113);
+          }
+          .mention-issue {
+            color: rgb(74 222 128);
+          }
           .tag-pill-gray {
             background: rgb(156 163 175 / 0.1);
             color: rgb(156 163 175);

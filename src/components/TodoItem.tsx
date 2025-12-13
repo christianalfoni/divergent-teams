@@ -12,7 +12,9 @@ interface TodoItemProps {
   onToggleTodoComplete: (todoId: string) => void;
   onUpdateTodo?: (todoId: string, text: string) => void;
   onDeleteTodo?: (todoId: string) => void;
+  onClick?: () => void;
   availableTags?: string[];
+  isActive?: boolean;
 }
 
 // Helper function to check if HTML content is empty
@@ -112,7 +114,14 @@ export default function TodoItem(props: TodoItemProps) {
     state.isPressed = true;
   };
 
-  const handleContainerClick = (_e: Rask.MouseEvent) => {
+  const handleContainerClick = (e: Rask.MouseEvent) => {
+    // If onClick is provided, call it instead of entering edit mode
+    if (props.onClick) {
+      e.stopPropagation();
+      props.onClick();
+      return;
+    }
+
     // Delay edit mode activation to allow for double-click
     if (clickTimeoutRef) {
       clearTimeout(clickTimeoutRef);
@@ -128,7 +137,7 @@ export default function TodoItem(props: TodoItemProps) {
   };
 
   if (state.isEditing) {
-    return (
+    return () => (
       <div className="mt-2 px-3 py-1" ref={containerRef}>
         <div className="flex gap-3">
           <div className="flex h-5 shrink-0 items-center">
@@ -179,10 +188,16 @@ export default function TodoItem(props: TodoItemProps) {
         onMouseDown={handleMouseDown}
         onMouseUp={() => (state.isPressed = false)}
         onMouseLeave={() => (state.isPressed = false)}
-        className={`group/todo relative flex gap-3 text-xs/5 transition-colors px-3 py-1 select-none focus:outline-none cursor-default ${
+        className={`group/todo relative flex gap-3 text-xs/5 transition-colors px-3 py-1 select-none focus:outline-none cursor-default bg-transparent ${
+          !props.isActive && !state.isPressed
+            ? "hover:bg-[var(--color-bg-hover)]"
+            : ""
+        } ${
           state.isPressed
-            ? "bg-[var(--color-bg-active)]"
-            : "hover:bg-[var(--color-bg-hover)]"
+            ? "!bg-[var(--color-bg-active)]"
+            : props.isActive
+            ? "!bg-[var(--color-bg-hover)]"
+            : ""
         } ${props.todo.completed ? "opacity-60" : ""}`}
       >
         <div

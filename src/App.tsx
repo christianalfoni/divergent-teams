@@ -2,7 +2,7 @@ import { AuthenticationContext } from "./contexts/AuthenticationContext";
 import { FirebaseContext } from "./contexts/FirebaseContext";
 import { ThemeContext } from "./contexts/ThemeContext";
 import { TopBar } from "./components/TopBar";
-import { Calendar } from "./components/Calendar";
+import { Calendar } from "./components/NewCalendar";
 
 export function App() {
   FirebaseContext.inject();
