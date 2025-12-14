@@ -58,6 +58,10 @@ export function getDateId(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
+export function isSameDay(dateA: Date, dateB: Date) {
+  return dateA.toDateString() === dateB.toDateString();
+}
+
 export function getWeekdays() {
   const today = new Date();
   const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday

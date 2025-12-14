@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from "rask-ui";
+import { useEffect, useState, useRef, useDerived } from "rask-ui";
 import TodoItem from "./TodoItem";
-import { getCurrentDayIndex, getWeekdays } from "../utils/calendar";
+import { getCurrentDayIndex, getWeekdays, isSameDay } from "../utils/calendar";
 import { SmartEditor, type SmartEditorRef, type Resource } from "./SmartEditor";
 import { MentionPalette } from "./MentionPalette";
 import { AuthenticationContext } from "../contexts/AuthenticationContext";
@@ -20,6 +20,12 @@ export function Calendar() {
   const editorRefs = weekdays.map(() => useRef<SmartEditorRef>());
   const currentDayIndex = getCurrentDayIndex();
   const addTodo = useAddTodo();
+  const derived = useDerived({
+    todosByDay: () =>
+      weekdays.map((date) => {
+        return data.todos.filter((todo) => isSameDay(date, todo.date.toDate()));
+      }),
+  });
 
   const state = useState({
     ...calculateWidths(),
@@ -132,7 +138,7 @@ export function Calendar() {
                     {authentication.isAuthenticating || data.isLoading ? (
                       <TodosLoadingPlaceholder />
                     ) : (
-                      data.todos.map((todo) => (
+                      derived.todosByDay[index].map((todo) => (
                         <TodoItem
                           key={todo.id}
                           todo={todo}
