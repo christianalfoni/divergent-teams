@@ -57,3 +57,33 @@ export function isToday(date: Date): boolean {
 export function getDateId(date: Date): string {
   return date.toISOString().split("T")[0];
 }
+
+export function getWeekdays() {
+  const today = new Date();
+  const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const monday = new Date(today);
+
+  // Calculate days to subtract to get to Monday
+  const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1;
+  monday.setDate(today.getDate() - daysFromMonday);
+
+  const weekdays = [];
+  for (let i = 0; i < 5; i++) {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + i);
+    weekdays.push(date);
+  }
+
+  return weekdays;
+}
+
+export function getCurrentDayIndex() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return getWeekdays().findIndex((date) => {
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+    return compareDate.getTime() === today.getTime();
+  });
+}

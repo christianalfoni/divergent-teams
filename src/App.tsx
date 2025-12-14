@@ -4,20 +4,24 @@ import { ThemeContext } from "./contexts/ThemeContext";
 import { TopBar } from "./components/TopBar";
 import { Calendar } from "./components/Calendar";
 import { DataContext } from "./contexts/DataContext";
+import { AuthModal } from "./components/AuthModal";
 
 export function App() {
   FirebaseContext.inject();
-  const theme = ThemeContext.inject();
+  ThemeContext.inject();
   const authentication = AuthenticationContext.inject();
+  DataContext.inject();
 
   return () => {
+    const showAuthModal =
+      !authentication.isAuthenticating && !authentication.user;
+
     return (
-      console.log(authentication) || (
-        <div class="min-h-screen bg-(--color-bg-primary) flex flex-col">
-          <TopBar />
-          <Calendar />
-        </div>
-      )
+      <div class="min-h-screen bg-(--color-bg-primary) flex flex-col">
+        <TopBar />
+        <Calendar />
+        {showAuthModal ? <AuthModal /> : null}
+      </div>
     );
   };
 }

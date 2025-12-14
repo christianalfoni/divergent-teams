@@ -95,6 +95,7 @@ export const AuthenticationContext = createContext(() => {
         isAuthenticating: false,
         user: {
           ...(userDoc.data() as User),
+          id: userDoc.id,
           organizationId,
         },
         error: null,

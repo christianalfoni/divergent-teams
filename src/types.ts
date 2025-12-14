@@ -6,6 +6,7 @@ export interface Conversation {
 
 export interface Issue {
   id: string;
+  title: string;
   description: string;
 }
 
@@ -30,7 +31,7 @@ export interface User {
 
 export interface Project {
   id: string;
-  name: string;
+  title: string;
 }
 
 export interface Todo {

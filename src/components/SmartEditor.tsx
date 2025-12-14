@@ -1,27 +1,219 @@
-import { assignRef, useEffect, useRef, type Ref } from "rask-ui";
+import { assignRef, useMountEffect, useRef, type Ref } from "rask-ui";
 
-type Props = {
-  html?: string; // initial serialized HTML with chips (optional)
+// Entity types
+export type Entity =
+  | { type: 'tag'; tag: string }
+  | { type: 'user'; userId: string; display: string }
+  | { type: 'project'; projectId: string; display: string }
+  | { type: 'issue'; issueId: string; display: string }
+  | { type: 'link'; url: string; display: string };
+
+// Rich text structure
+export type RichText = {
+  text: string;      // Contains [[0]], [[1]], etc.
+  entities: Entity[];
+};
+
+type SmartEditorProps = {
+  initialValue?: RichText;
   apiRef?: Ref<SmartEditorRef>;
-  editing: boolean; // controls edit vs view mode
-  onChange?: (html: string) => void; // serialized HTML output when editing
+  onSubmit?: (value: RichText) => void;
   placeholder?: string;
-  autoFocus?: boolean;
+  focus?: boolean;
   onKeyDown?: (e: Rask.KeyboardEvent<HTMLDivElement>) => void;
   onBlur?: () => void;
   availableTags?: string[]; // List of all tag texts from other todos for autocomplete
+  onMention?: (query: string, insertMention: (entity: Extract<Entity, { type: 'user' | 'project' | 'issue' }>) => void) => void;
+};
+
+type RichTextDisplayProps = {
+  value: RichText;
+  onUserClick?: (userId: string) => void;
+  onProjectClick?: (projectId: string) => void;
+  onIssueClick?: (issueId: string) => void;
 };
 
 export type SmartEditorRef = {
   clear: () => void;
-  setHtml: (html: string) => void;
-  getHtml: () => string;
+  setValue: (value: RichText) => void;
+  getValue: () => RichText;
 };
 
 const URL_REGEX = /^(https?:\/\/)?([\w.-]+)(:\d+)?(\/[^\s]*)?$/i;
 const TAG_REGEX = /^#(\w+)$/;
 
-export function SmartEditor(props: Props) {
+// Convert RichText -> HTML (for editing mode)
+function richTextToHtml(data: RichText): string {
+  let html = data.text;
+
+  data.entities.forEach((entity, i) => {
+    const placeholder = `[[${i}]]`;
+    let replacement = '';
+
+    switch (entity.type) {
+      case 'tag':
+        const color = getTagColor(entity.tag);
+        replacement = `<span data-tag="${entity.tag}" contenteditable="false" class="tag-pill tag-pill-${color}">${entity.tag}</span>`;
+        break;
+      case 'link':
+        replacement = `<span data-url="${entity.url}" contenteditable="false" class="smartlink-chip">${entity.display}</span>`;
+        break;
+      case 'user':
+        replacement = `<span data-user="${entity.userId}" contenteditable="false" class="mention-person">@${entity.display}</span>`;
+        break;
+      case 'project':
+        replacement = `<span data-project="${entity.projectId}" contenteditable="false" class="mention-project">${entity.display}</span>`;
+        break;
+      case 'issue':
+        replacement = `<span data-issue="${entity.issueId}" contenteditable="false" class="mention-issue">#${entity.display}</span>`;
+        break;
+    }
+
+    html = html.replace(placeholder, replacement);
+  });
+
+  return html;
+}
+
+// Convert HTML -> RichText (when onChange fires)
+function htmlToRichText(html: string): RichText {
+  const entities: Entity[] = [];
+  let index = 0;
+  let text = html;
+
+  // Replace tags
+  text = text.replace(/<span data-tag="([^"]+)"[^>]*>([^<]*)<\/span>/g, (match, tag) => {
+    entities.push({ type: 'tag', tag });
+    return `[[${index++}]]`;
+  });
+
+  // Replace links
+  text = text.replace(/<span data-url="([^"]+)"[^>]*>([^<]*)<\/span>/g, (match, url, display) => {
+    entities.push({ type: 'link', url, display });
+    return `[[${index++}]]`;
+  });
+
+  // Replace user mentions
+  text = text.replace(/<span data-user="([^"]+)"[^>]*>@([^<]*)<\/span>/g, (match, userId, display) => {
+    entities.push({ type: 'user', userId, display });
+    return `[[${index++}]]`;
+  });
+
+  // Replace project mentions
+  text = text.replace(/<span data-project="([^"]+)"[^>]*>([^<]*)<\/span>/g, (match, projectId, display) => {
+    entities.push({ type: 'project', projectId, display });
+    return `[[${index++}]]`;
+  });
+
+  // Replace issue mentions
+  text = text.replace(/<span data-issue="([^"]+)"[^>]*>#([^<]*)<\/span>/g, (match, issueId, display) => {
+    entities.push({ type: 'issue', issueId, display });
+    return `[[${index++}]]`;
+  });
+
+  // Strip any remaining HTML tags and decode entities
+  text = text.replace(/<[^>]+>/g, '');
+  text = text.replace(/&nbsp;/g, ' ');
+
+  return { text, entities };
+}
+
+// RichTextDisplay Component - For displaying rich text (view only)
+export function RichTextDisplay(props: RichTextDisplayProps) {
+  const parts = props.value.text.split(/(\[\[\d+\]\])/g);
+
+  const content = parts.map((part, i) => {
+    const match = part.match(/\[\[(\d+)\]\]/);
+
+    if (match) {
+      const entityIndex = parseInt(match[1]);
+      const entity = props.value.entities[entityIndex];
+
+      switch (entity.type) {
+        case 'tag':
+          const color = getTagColor(entity.tag);
+          return (
+            <span key={i} className={`tag-pill tag-pill-${color}`}>
+              {entity.tag}
+            </span>
+          );
+
+        case 'link':
+          return (
+            <a
+              key={i}
+              href={entity.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="smartlink-anchor"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(entity.url, '_blank');
+              }}
+            >
+              {entity.display}
+            </a>
+          );
+
+        case 'user':
+          return (
+            <span
+              key={i}
+              className="mention-person"
+              onClick={() => props.onUserClick?.(entity.userId)}
+              style={{ cursor: props.onUserClick ? 'pointer' : 'default' }}
+            >
+              @{entity.display}
+            </span>
+          );
+
+        case 'project':
+          return (
+            <span
+              key={i}
+              className="mention-project"
+              onClick={() => props.onProjectClick?.(entity.projectId)}
+              style={{ cursor: props.onProjectClick ? 'pointer' : 'default' }}
+            >
+              {entity.display}
+            </span>
+          );
+
+        case 'issue':
+          return (
+            <span
+              key={i}
+              className="mention-issue"
+              onClick={() => props.onIssueClick?.(entity.issueId)}
+              style={{ cursor: props.onIssueClick ? 'pointer' : 'default' }}
+            >
+              #{entity.display}
+            </span>
+          );
+      }
+    }
+
+    return part; // Plain text
+  });
+
+  return () => (
+    <div
+      className="smartlinks is-view"
+      style={{
+        "white-space": "pre-wrap",
+        "word-break": "break-word",
+        "font-size": "var(--todo-text-size)",
+        "min-height": "1.5rem",
+      }}
+    >
+      {content}
+    </div>
+  );
+}
+
+// SmartEditor Component - For editing rich text
+export function SmartEditor(props: SmartEditorProps) {
   const ref = useRef<HTMLDivElement>();
   let isInitialMount = true;
 
@@ -33,72 +225,32 @@ export function SmartEditor(props: Props) {
           ref.current.innerHTML = "";
         }
       },
-      setHtml: (html: string) => {
+      setValue: (value: RichText) => {
         if (ref.current) {
-          ref.current.innerHTML = html;
+          ref.current.innerHTML = richTextToHtml(value);
         }
       },
-      getHtml: () => {
-        return ref.current?.innerHTML || "";
+      getValue: () => {
+        return htmlToRichText(ref.current?.innerHTML || "");
       },
     });
   }
 
-  // Initialize content only once or when explicitly changing modes
-  useEffect(() => {
+  // Initialize content only once
+  useMountEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    el.contentEditable = props.editing ? "true" : "false";
+    el.contentEditable = "true";
 
-    // Only set innerHTML on initial mount
+    // Set innerHTML on initial mount
     if (isInitialMount) {
-      if (props.html) el.innerHTML = props.html;
+      if (props.initialValue) el.innerHTML = richTextToHtml(props.initialValue);
       isInitialMount = false;
-      // Don't return - continue to do chip-to-anchor conversion on initial mount
-    } else {
-      // Update innerHTML when html prop changes - but ONLY when not editing
-      // to avoid cursor jumping during editing
-      if (
-        !props.editing &&
-        props.html !== undefined &&
-        el.innerHTML !== props.html
-      ) {
-        el.innerHTML = props.html;
-      }
-    }
-
-    // When switching to view mode, swap chip spans -> anchors
-    if (!props.editing) {
-      // Convert chip spans to anchors (purely visual; you might store both separately if needed)
-      el.querySelectorAll("span[data-url]").forEach((chip) => {
-        const url = (chip as HTMLElement).dataset.url!;
-        const domain = chip.textContent || url;
-        const a = document.createElement("a");
-        a.href = url;
-        a.textContent = domain;
-        a.rel = "noopener noreferrer";
-        a.target = "_blank";
-        a.className = "smartlink-anchor";
-        a.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          window.open(url, "_blank");
-        });
-        chip.replaceWith(a);
-      });
-    } else {
-      // Convert anchors back to chips on entering edit mode
-      el.querySelectorAll("a.smartlink-anchor").forEach((a) => {
-        const url = (a as HTMLAnchorElement).href;
-        const domain = a.textContent || url;
-        const chip = makeChip(domain, url);
-        a.replaceWith(chip);
-      });
     }
 
     // Auto-focus if requested
-    if (props.autoFocus && props.editing && el) {
+    if (props.focus && el) {
       el.focus();
       // Move cursor to end
       const range = document.createRange();
@@ -111,17 +263,61 @@ export function SmartEditor(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   });
 
-  // Notify changes (serialize innerHTML while editing)
+  // Notify changes (serialize innerHTML to RichText)
   const emitChange = () => {
-    if (!props.editing || !props.onChange || !ref.current) return;
-    props.onChange(ref.current.innerHTML);
+    if (!props.onSubmit || !ref.current) return;
+    const richText = htmlToRichText(ref.current.innerHTML);
+    props.onSubmit(richText);
   };
 
-  // Handle input to update shadow
+  // Handle input to update shadow and check for mentions
   const handleInput = () => {
     emitChange();
     updateShadow();
+    checkForMention();
   };
+
+  // Check if we're in a mention context and trigger onMention
+  function checkForMention() {
+    if (!props.onMention) return;
+
+    const wordInfo = getWordBeforeCursor();
+    if (!wordInfo) return;
+
+    // Check if the word starts with @
+    if (wordInfo.word.startsWith('@')) {
+      const query = wordInfo.word.slice(1); // Remove the @
+      const { range } = wordInfo;
+
+      // Create the insertMention callback
+      const insertMention = (entity: Extract<Entity, { type: 'user' | 'project' | 'issue' }>) => {
+        // Remove the @query text
+        range.deleteContents();
+
+        // Create and insert the mention span
+        const mentionSpan = makeMentionSpan(entity);
+        range.insertNode(mentionSpan);
+
+        // Add a space after the mention
+        const space = document.createTextNode(" ");
+        range.setStartAfter(mentionSpan);
+        range.insertNode(space);
+
+        // Move cursor after the space
+        range.setStartAfter(space);
+        range.collapse(true);
+        const sel = document.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+
+        // Emit change
+        emitChange();
+      };
+
+      // Call the onMention callback with query and insertMention
+      props.onMention(query, insertMention);
+    }
+  }
 
   // Create the non-editable chip node for links
   function makeChip(domain: string, url: string) {
@@ -144,9 +340,35 @@ export function SmartEditor(props: Props) {
     return pill;
   }
 
+  // Create mention span for user/project/issue
+  function makeMentionSpan(entity: Extract<Entity, { type: 'user' | 'project' | 'issue' }>) {
+    const span = document.createElement("span");
+    span.setAttribute("contenteditable", "false");
+
+    switch (entity.type) {
+      case 'user':
+        span.setAttribute("data-user", entity.userId);
+        span.textContent = `@${entity.display}`;
+        span.className = "mention-person";
+        break;
+      case 'project':
+        span.setAttribute("data-project", entity.projectId);
+        span.textContent = entity.display;
+        span.className = "mention-project";
+        break;
+      case 'issue':
+        span.setAttribute("data-issue", entity.issueId);
+        span.textContent = `#${entity.display}`;
+        span.className = "mention-issue";
+        break;
+    }
+
+    return span;
+  }
+
   // Handle paste to create chip
   const onPaste = (e: Rask.ClipboardEvent<HTMLDivElement>) => {
-    if (!props.editing || !e.clipboardData) return;
+    if (!e.clipboardData) return;
     const text = e.clipboardData.getData("text/plain").trim();
     const domain = extractDomain(text);
     if (domain && URL_REGEX.test(text)) {
@@ -201,8 +423,8 @@ export function SmartEditor(props: Props) {
     const text = node.textContent || "";
     const beforeCursor = text.slice(0, offset);
 
-    // Match word starting with # or URL pattern
-    const match = beforeCursor.match(/(#\w+|\S+)$/);
+    // Match word starting with #, @, or URL pattern
+    const match = beforeCursor.match(/(#\w+|@\w+|\S+)$/);
     if (!match) return null;
 
     const word = match[0];
@@ -259,7 +481,7 @@ export function SmartEditor(props: Props) {
 
   // Update shadow text based on current input
   function updateShadow() {
-    if (!props.editing || !ref.current) return;
+    if (!ref.current) return;
 
     // Remove any existing shadow
     const existingShadow = ref.current.querySelector(".tag-shadow");
@@ -307,7 +529,6 @@ export function SmartEditor(props: Props) {
 
   // Handle tag and link conversion on space
   const onKeyDown = (e: Rask.KeyboardEvent<HTMLDivElement>) => {
-    if (!props.editing) return;
 
     // Handle Tab for autocomplete BEFORE external handler
     if (e.key === "Tab") {
@@ -473,7 +694,7 @@ export function SmartEditor(props: Props) {
     <>
       <div
         ref={ref}
-        className={`smartlinks ${props.editing ? "is-editing" : "is-view"}`}
+        className="smartlinks is-editing"
         onPaste={onPaste}
         onInput={handleInput}
         onKeyDown={onKeyDown}

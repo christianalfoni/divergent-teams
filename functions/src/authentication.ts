@@ -38,7 +38,7 @@ export const createBeforeSignIn = beforeUserSignedIn(
     // 2. Extract WorkOS Data
     const workosProfile = additionalUserInfo?.profile || {};
 
-    // Attempt to find the Org ID in standard profile or raw attributes
+    // Attempt to find the Org ID
     const organizationId =
       workosProfile.organization_id ||
       workosProfile.raw_attributes?.organization_id;
@@ -47,12 +47,17 @@ export const createBeforeSignIn = beforeUserSignedIn(
       throw new Error("Missing organization id in WorkOS profile");
     }
 
-    // Extract Display Name and Photo URL (OIDC standard fields)
-    const displayName =
-      workosProfile.name ||
-      workosProfile.display_name ||
-      user.displayName ||
-      null;
+    // Construct Display Name from multiple possible OIDC fields
+    // WorkOS often sends 'given_name' and 'family_name' instead of a single 'name'
+    let extractedName = workosProfile.name || workosProfile.display_name;
+
+    if (!extractedName && (workosProfile.given_name || workosProfile.family_name)) {
+        extractedName = [workosProfile.given_name, workosProfile.family_name]
+          .filter(Boolean) // Remove nulls/undefined if one is missing
+          .join(" ");
+    }
+
+    const displayName = extractedName || user.displayName || null;
 
     const photoURL = workosProfile.picture || user.photoURL || null;
 
@@ -94,6 +99,7 @@ export const createBeforeSignIn = beforeUserSignedIn(
       const userDoc = await userRef.get();
 
       const userData = {
+        id: user.uid,
         email: user.email,
         displayName: displayName,
         photoURL: photoURL,
