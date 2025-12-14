@@ -1,5 +1,14 @@
 import type { Timestamp } from "firebase/firestore";
-import type { Resource, RichText } from "./components/SmartEditor";
+import type { RichText } from "./components/SmartEditor";
+
+export type Mention = {
+  id: string;
+  updatedAt: Timestamp;
+} & {
+  type: "user";
+  userId: string;
+  displayName: string;
+};
 
 export interface Conversation {
   id: string;

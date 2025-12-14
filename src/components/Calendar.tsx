@@ -7,6 +7,7 @@ import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import { TodosLoadingPlaceholder } from "./TodosLoadingPlaceholder";
 import { useAddTodo } from "../hooks/useAddTodo";
 import { DataContext } from "../contexts/DataContext";
+import type { Mention } from "../types";
 
 // Collapsed column width
 const COLLAPSED_WIDTH = 100;
@@ -35,11 +36,7 @@ export function Calendar() {
     mentionPalette: {
       open: false,
       query: "",
-      insertMention: null as
-        | ((
-            entity: Extract<Resource, { type: "user" | "project" | "issue" }>
-          ) => void)
-        | null,
+      insertMention: null as ((mention: Mention) => void) | null,
     },
   });
 
@@ -83,6 +80,10 @@ export function Calendar() {
           }
         }}
         onClose={() => {
+          // Re-enable submit if user cancelled the mention
+          if (state.addingTodoDayIndex !== null) {
+            editorRefs[state.addingTodoDayIndex].current?.cancelMention();
+          }
           state.mentionPalette.open = false;
           state.mentionPalette.insertMention = null;
         }}

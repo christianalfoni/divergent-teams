@@ -1,11 +1,12 @@
-import { createContext, useDerived } from "rask-ui";
+import { createContext, useAsync, useDerived, useEffect } from "rask-ui";
 import { FirebaseContext } from "./FirebaseContext";
-import type { Todo } from "../types";
+import type { Mention, Todo } from "../types";
 import { AuthenticationContext } from "./AuthenticationContext";
 import { useSyncQuery } from "../hooks/useSyncQuery";
 import { query, where } from "firebase/firestore";
 
 export const DataContext = createContext(() => {
+  let lastMentionSyncDate = new Date(1900, 1, 1);
   const authentication = AuthenticationContext.use();
   const firebase = FirebaseContext.use();
   const todos = useSyncQuery<Todo>(() => {
@@ -22,9 +23,29 @@ export const DataContext = createContext(() => {
       where("userId", "==", authentication.user.id)
     );
   });
+  const mentions = useSyncQuery<Mention>(
+    () => {
+      if (!authentication.user) {
+        return null;
+      }
+
+      const mentionsCollection = firebase.collections.mentions(
+        authentication.user.organizationId
+      );
+
+      return query(
+        mentionsCollection,
+        where("updatedAt", ">", lastMentionSyncDate)
+      );
+    },
+    (update) => {
+      lastMentionSyncDate = update.data.updatedAt.toDate();
+    }
+  );
 
   return useDerived({
-    isLoading: () => todos.isLoading,
+    isLoading: () => todos.isLoading || mentions.isLoading,
     todos: () => todos.data,
+    mentions: () => mentions.data,
   });
 });

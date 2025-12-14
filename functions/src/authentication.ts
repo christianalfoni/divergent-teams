@@ -47,17 +47,8 @@ export const createBeforeSignIn = beforeUserSignedIn(
       throw new Error("Missing organization id in WorkOS profile");
     }
 
-    // Construct Display Name from multiple possible OIDC fields
-    // WorkOS often sends 'given_name' and 'family_name' instead of a single 'name'
-    let extractedName = workosProfile.name || workosProfile.display_name;
-
-    if (!extractedName && (workosProfile.given_name || workosProfile.family_name)) {
-        extractedName = [workosProfile.given_name, workosProfile.family_name]
-          .filter(Boolean) // Remove nulls/undefined if one is missing
-          .join(" ");
-    }
-
-    const displayName = extractedName || user.displayName || null;
+    const displayName =
+      workosProfile.first_name + " " + workosProfile.last_name;
 
     const photoURL = workosProfile.picture || user.photoURL || null;
 
@@ -65,6 +56,7 @@ export const createBeforeSignIn = beforeUserSignedIn(
       uid: user.uid,
       orgId: organizationId,
       displayName,
+      workosProfile,
     });
 
     // 3. Update Firestore Structure

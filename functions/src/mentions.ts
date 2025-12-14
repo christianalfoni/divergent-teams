@@ -6,6 +6,7 @@
 
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
+import { serverTimestamp } from "firebase/firestore";
 
 const db = admin.firestore();
 
@@ -15,8 +16,8 @@ const db = admin.firestore();
  */
 export const onUserUpdate = onDocumentWritten(
   {
-    document: 'organizations/{orgId}/users/{userId}',
-    region: 'us-central1',
+    document: "organizations/{orgId}/users/{userId}",
+    region: "us-central1",
   },
   async (event) => {
     // Guard clause for event data
@@ -32,9 +33,9 @@ export const onUserUpdate = onDocumentWritten(
 
     // Reference the mention document inside the specific organization
     const mentionRef = db
-      .collection('organizations')
+      .collection("organizations")
       .doc(orgId)
-      .collection('mentions')
+      .collection("mentions")
       .doc(userId);
 
     // If user was deleted, delete the mention
@@ -44,9 +45,14 @@ export const onUserUpdate = onDocumentWritten(
     }
 
     // Create/update the mention with only displayName and userId
-    await mentionRef.set({
-      userId: userId,
-      displayName: newData?.displayName || null,
-    }, { merge: true });
+    await mentionRef.set(
+      {
+        type: "user",
+        userId: userId,
+        displayName: newData?.displayName || null,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
   }
 );

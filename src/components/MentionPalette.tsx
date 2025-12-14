@@ -1,172 +1,20 @@
 import { useState, useRef, useEffect } from "rask-ui";
-import type { Resource } from "./SmartEditor";
-
-type MentionItem = {
-  id: string;
-  type: "user" | "project" | "issue";
-  name: string;
-  description?: string;
-  email?: string;
-  phone?: string;
-  url?: string;
-  imageUrl?: string;
-  status?: string;
-  assignee?: string;
-  priority?: string;
-};
+import type { Mention } from "../types";
+import { DataContext } from "../contexts/DataContext";
 
 type Props = {
   open: boolean;
   query: string;
-  onSelect: (
-    entity: Extract<Resource, { type: "user" | "project" | "issue" }>
-  ) => void;
+  onSelect: (mention: Mention) => void;
   onClose: () => void;
 };
 
-// Mock data with more details
-const mockUsers: MentionItem[] = [
-  {
-    id: "user-1",
-    type: "user",
-    name: "Alice Johnson",
-    description: "Product Manager",
-    email: "alice.johnson@example.com",
-    phone: "1-555-123-4567",
-    url: "https://example.com/alice",
-    imageUrl:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-  },
-  {
-    id: "user-2",
-    type: "user",
-    name: "Bob Smith",
-    description: "Software Engineer",
-    email: "bob.smith@example.com",
-    phone: "1-555-234-5678",
-    url: "https://example.com/bob",
-    imageUrl:
-      "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-  },
-  {
-    id: "user-3",
-    type: "user",
-    name: "Carol Davis",
-    description: "Designer",
-    email: "carol.davis@example.com",
-    phone: "1-555-345-6789",
-    url: "https://example.com/carol",
-    imageUrl:
-      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-  },
-  {
-    id: "user-4",
-    type: "user",
-    name: "David Martinez",
-    description: "Engineering Manager",
-    email: "david.martinez@example.com",
-    phone: "1-555-456-7890",
-    url: "https://example.com/david",
-    imageUrl:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-  },
-  {
-    id: "user-5",
-    type: "user",
-    name: "Emily Chen",
-    description: "UX Researcher",
-    email: "emily.chen@example.com",
-    phone: "1-555-567-8901",
-    url: "https://example.com/emily",
-    imageUrl:
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-  },
-];
-
-const mockProjects: MentionItem[] = [
-  {
-    id: "project-1",
-    type: "project",
-    name: "Website Redesign",
-    description: "Q1 2025 redesign project",
-    status: "In Progress",
-    url: "https://example.com/projects/website-redesign",
-  },
-  {
-    id: "project-2",
-    type: "project",
-    name: "Mobile App",
-    description: "iOS and Android app",
-    status: "Planning",
-    url: "https://example.com/projects/mobile-app",
-  },
-  {
-    id: "project-3",
-    type: "project",
-    name: "API Migration",
-    description: "Backend infrastructure upgrade",
-    status: "Active",
-    url: "https://example.com/projects/api-migration",
-  },
-  {
-    id: "project-4",
-    type: "project",
-    name: "Design System",
-    description: "Component library v2",
-    status: "In Progress",
-    url: "https://example.com/projects/design-system",
-  },
-];
-
-const mockIssues: MentionItem[] = [
-  {
-    id: "issue-1",
-    type: "issue",
-    name: "Fix login bug",
-    description: "#123",
-    assignee: "Bob Smith",
-    priority: "High",
-    status: "In Progress",
-  },
-  {
-    id: "issue-2",
-    type: "issue",
-    name: "Add dark mode",
-    description: "#124",
-    assignee: "Carol Davis",
-    priority: "Medium",
-    status: "To Do",
-  },
-  {
-    id: "issue-3",
-    type: "issue",
-    name: "Performance improvements",
-    description: "#125",
-    assignee: "Alice Johnson",
-    priority: "High",
-    status: "In Review",
-  },
-  {
-    id: "issue-4",
-    type: "issue",
-    name: "Update documentation",
-    description: "#126",
-    assignee: "David Martinez",
-    priority: "Low",
-    status: "To Do",
-  },
-];
-
-const allItems = [...mockUsers, ...mockProjects, ...mockIssues];
-
-// Recent searches (mock)
-const recentItems = [allItems[2], allItems[5], allItems[0], allItems[8]];
-
 export function MentionPalette(props: Props) {
+  const data = DataContext.use();
   const state = useState({
     selectedIndex: 0,
     internalQuery: "",
-    activeItem: null as MentionItem | null,
+    activeItem: null as Mention | null,
   });
 
   const inputRef = useRef<HTMLInputElement>();
@@ -184,9 +32,9 @@ export function MentionPalette(props: Props) {
   // Filter items by query
   const filteredItems =
     searchQuery === ""
-      ? recentItems
-      : allItems.filter((item) =>
-          item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ? data.mentions
+      : data.mentions.filter((item) =>
+          item.displayName.toLowerCase().includes(searchQuery.toLowerCase())
         );
 
   // Update selected index when filtered items change
@@ -197,34 +45,8 @@ export function MentionPalette(props: Props) {
   // Update active item based on selected index
   state.activeItem = filteredItems[state.selectedIndex] || null;
 
-  const handleSelect = (item: MentionItem) => {
-    let entity: Extract<Resource, { type: "user" | "project" | "issue" }>;
-
-    switch (item.type) {
-      case "user":
-        entity = {
-          type: "user",
-          userId: item.id,
-          display: item.name,
-        };
-        break;
-      case "project":
-        entity = {
-          type: "project",
-          projectId: item.id,
-          display: item.name,
-        };
-        break;
-      case "issue":
-        entity = {
-          type: "issue",
-          issueId: item.id,
-          display: item.name,
-        };
-        break;
-    }
-
-    props.onSelect(entity);
+  const handleSelect = (item: Mention) => {
+    props.onSelect(item);
     props.onClose();
   };
 
@@ -324,15 +146,9 @@ export function MentionPalette(props: Props) {
                         onClick={() => handleSelect(item)}
                         onMouseEnter={() => handleMouseEnter(index)}
                       >
-                        {item.type === "user" && item.imageUrl ? (
-                          <img
-                            src={item.imageUrl}
-                            alt=""
-                            className="w-6 h-6 flex-none rounded-full bg-gray-100 dark:bg-gray-800"
-                          />
-                        ) : item.type === "user" ? (
+                        {item.type === "user" ? (
                           <div className="w-6 h-6 flex-none rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-medium">
-                            {item.name.charAt(0)}
+                            {item.displayName.charAt(0)}
                           </div>
                         ) : item.type === "project" ? (
                           <div className="w-6 h-6 flex-none rounded-md bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 text-xs">
@@ -344,7 +160,7 @@ export function MentionPalette(props: Props) {
                           </div>
                         )}
                         <span className="ml-3 flex-auto truncate">
-                          {item.name}
+                          {item.displayName}
                         </span>
                         {state.selectedIndex === index && (
                           <svg
@@ -370,16 +186,9 @@ export function MentionPalette(props: Props) {
                 {state.activeItem && (
                   <div className="hidden sm:flex w-1/2 flex-none flex-col divide-y divide-gray-100 dark:divide-white/10 overflow-y-auto h-96">
                     <div className="flex-none p-6 text-center">
-                      {state.activeItem.type === "user" &&
-                      state.activeItem.imageUrl ? (
-                        <img
-                          src={state.activeItem.imageUrl}
-                          alt=""
-                          className="mx-auto w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800"
-                        />
-                      ) : state.activeItem.type === "user" ? (
+                      {state.activeItem.type === "user" ? (
                         <div className="mx-auto w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-medium text-2xl">
-                          {state.activeItem.name.charAt(0)}
+                          {state.activeItem.displayName.charAt(0)}
                         </div>
                       ) : state.activeItem.type === "project" ? (
                         <div className="mx-auto w-16 h-16 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 text-3xl">
@@ -391,117 +200,12 @@ export function MentionPalette(props: Props) {
                         </div>
                       )}
                       <h2 className="mt-3 font-semibold text-gray-900 dark:text-white">
-                        {state.activeItem.name}
+                        {state.activeItem.displayName}
                       </h2>
-                      {state.activeItem.description && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {state.activeItem.description}
-                        </p>
-                      )}
                     </div>
                     <div className="flex flex-auto flex-col justify-between p-6">
                       <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm text-gray-700 dark:text-gray-300">
-                        {state.activeItem.type === "user" && (
-                          <>
-                            {state.activeItem.email && (
-                              <>
-                                <dt className="col-end-1 font-semibold text-gray-900 dark:text-white">
-                                  Email
-                                </dt>
-                                <dd className="truncate">
-                                  <a
-                                    href={`mailto:${state.activeItem.email}`}
-                                    className="text-indigo-600 dark:text-indigo-400 underline"
-                                  >
-                                    {state.activeItem.email}
-                                  </a>
-                                </dd>
-                              </>
-                            )}
-                            {state.activeItem.phone && (
-                              <>
-                                <dt className="col-end-1 font-semibold text-gray-900 dark:text-white">
-                                  Phone
-                                </dt>
-                                <dd>{state.activeItem.phone}</dd>
-                              </>
-                            )}
-                            {state.activeItem.url && (
-                              <>
-                                <dt className="col-end-1 font-semibold text-gray-900 dark:text-white">
-                                  URL
-                                </dt>
-                                <dd className="truncate">
-                                  <a
-                                    href={state.activeItem.url}
-                                    className="text-indigo-600 dark:text-indigo-400 underline"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    {state.activeItem.url}
-                                  </a>
-                                </dd>
-                              </>
-                            )}
-                          </>
-                        )}
-                        {state.activeItem.type === "project" && (
-                          <>
-                            {state.activeItem.status && (
-                              <>
-                                <dt className="col-end-1 font-semibold text-gray-900 dark:text-white">
-                                  Status
-                                </dt>
-                                <dd>{state.activeItem.status}</dd>
-                              </>
-                            )}
-                            {state.activeItem.url && (
-                              <>
-                                <dt className="col-end-1 font-semibold text-gray-900 dark:text-white">
-                                  URL
-                                </dt>
-                                <dd className="truncate">
-                                  <a
-                                    href={state.activeItem.url}
-                                    className="text-indigo-600 dark:text-indigo-400 underline"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    {state.activeItem.url}
-                                  </a>
-                                </dd>
-                              </>
-                            )}
-                          </>
-                        )}
-                        {state.activeItem.type === "issue" && (
-                          <>
-                            {state.activeItem.status && (
-                              <>
-                                <dt className="col-end-1 font-semibold text-gray-900 dark:text-white">
-                                  Status
-                                </dt>
-                                <dd>{state.activeItem.status}</dd>
-                              </>
-                            )}
-                            {state.activeItem.assignee && (
-                              <>
-                                <dt className="col-end-1 font-semibold text-gray-900 dark:text-white">
-                                  Assignee
-                                </dt>
-                                <dd>{state.activeItem.assignee}</dd>
-                              </>
-                            )}
-                            {state.activeItem.priority && (
-                              <>
-                                <dt className="col-end-1 font-semibold text-gray-900 dark:text-white">
-                                  Priority
-                                </dt>
-                                <dd>{state.activeItem.priority}</dd>
-                              </>
-                            )}
-                          </>
-                        )}
+                        {/* CONTENT */}
                       </dl>
                       <button
                         type="button"

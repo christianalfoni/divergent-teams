@@ -1,12 +1,12 @@
-import {
-  onSnapshot,
-  Query,
-  type CollectionReference,
-} from "firebase/firestore";
+import { onSnapshot, Query } from "firebase/firestore";
 import { assignState, useEffect, useState } from "rask-ui";
 
 export function useSyncQuery<T extends { id: string }>(
-  collectionFn: () => Query | null
+  collectionFn: () => Query | null,
+  onUpdate?: (update: {
+    type: "added" | "modified" | "removed";
+    data: T;
+  }) => void
 ) {
   const state = useState({
     isSubscribing: false,
@@ -31,8 +31,8 @@ export function useSyncQuery<T extends { id: string }>(
     return onSnapshot(
       collection,
       (snapshot) => {
+        state.isLoading = false;
         snapshot.docChanges().forEach((docChange) => {
-          state.isLoading = false;
           const data = docChange.doc.data() as T;
           const item = state.data.find((item) => item.id === data.id);
 
@@ -54,6 +54,8 @@ export function useSyncQuery<T extends { id: string }>(
               break;
             }
           }
+
+          onUpdate?.({ type: docChange.type, data });
         });
       },
       (error) => {

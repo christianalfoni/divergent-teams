@@ -1,4 +1,5 @@
 import { assignRef, useMountEffect, useRef, type Ref } from "rask-ui";
+import type { Mention } from "../types";
 
 // Entity types
 export type Resource =
@@ -25,9 +26,7 @@ type SmartEditorProps = {
   availableTags?: string[]; // List of all tag texts from other todos for autocomplete
   onMention?: (
     query: string,
-    insertMention: (
-      entity: Extract<Resource, { type: "user" | "project" | "issue" }>
-    ) => void
+    insertMention: (mention: Mention) => void
   ) => void;
 };
 
@@ -42,6 +41,7 @@ export type SmartEditorRef = {
   clear: () => void;
   setValue: (value: RichText) => void;
   getValue: () => RichText;
+  cancelMention: () => void;
 };
 
 const URL_REGEX = /^(https?:\/\/)?([\w.-]+)(:\d+)?(\/[^\s]*)?$/i;
@@ -64,7 +64,7 @@ function richTextToHtml(data: RichText): string {
         replacement = `<span data-url="${entity.url}" contenteditable="false" class="smartlink-chip">${entity.display}</span>`;
         break;
       case "user":
-        replacement = `<span data-user="${entity.userId}" contenteditable="false" class="mention-person">@${entity.display}</span>`;
+        replacement = `<span data-user="${entity.userId}" contenteditable="false" class="mention-person">${entity.display}</span>`;
         break;
       case "project":
         replacement = `<span data-project="${entity.projectId}" contenteditable="false" class="mention-project">${entity.display}</span>`;
@@ -86,45 +86,45 @@ function htmlToRichText(html: string): RichText {
   let index = 0;
   let text = html;
 
-  // Replace tags
+  // Replace tags (match data-tag anywhere in the tag)
   text = text.replace(
-    /<span data-tag="([^"]+)"[^>]*>([^<]*)<\/span>/g,
+    /<span\b[^>]*\bdata-tag="([^"]+)"[^>]*>([^<]*)<\/span>/g,
     (match, tag) => {
       entities.push({ type: "tag", tag });
       return `[[${index++}]]`;
     }
   );
 
-  // Replace links
+  // Replace links (match data-url anywhere in the tag)
   text = text.replace(
-    /<span data-url="([^"]+)"[^>]*>([^<]*)<\/span>/g,
+    /<span\b[^>]*\bdata-url="([^"]+)"[^>]*>([^<]*)<\/span>/g,
     (match, url, display) => {
       entities.push({ type: "link", url, display });
       return `[[${index++}]]`;
     }
   );
 
-  // Replace user mentions
+  // Replace user mentions (match data-user anywhere in the tag)
   text = text.replace(
-    /<span data-user="([^"]+)"[^>]*>@([^<]*)<\/span>/g,
+    /<span\b[^>]*\bdata-user="([^"]+)"[^>]*>([^<]*)<\/span>/g,
     (match, userId, display) => {
       entities.push({ type: "user", userId, display });
       return `[[${index++}]]`;
     }
   );
 
-  // Replace project mentions
+  // Replace project mentions (match data-project anywhere in the tag)
   text = text.replace(
-    /<span data-project="([^"]+)"[^>]*>([^<]*)<\/span>/g,
+    /<span\b[^>]*\bdata-project="([^"]+)"[^>]*>([^<]*)<\/span>/g,
     (match, projectId, display) => {
       entities.push({ type: "project", projectId, display });
       return `[[${index++}]]`;
     }
   );
 
-  // Replace issue mentions
+  // Replace issue mentions (match data-issue anywhere in the tag)
   text = text.replace(
-    /<span data-issue="([^"]+)"[^>]*>#([^<]*)<\/span>/g,
+    /<span\b[^>]*\bdata-issue="([^"]+)"[^>]*>#([^<]*)<\/span>/g,
     (match, issueId, display) => {
       entities.push({ type: "issue", issueId, display });
       return `[[${index++}]]`;
@@ -184,7 +184,7 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
               onClick={() => props.onUserClick?.(entity.userId)}
               style={{ cursor: props.onUserClick ? "pointer" : "default" }}
             >
-              @{entity.display}
+              {entity.display}
             </span>
           );
 
@@ -217,17 +217,14 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
     return part; // Plain text
   });
 
-  return () => (
-    <div className="smartlinks is-view">
-      {content}
-    </div>
-  );
+  return () => <div className="smartlinks is-view">{content}</div>;
 }
 
 // SmartEditor Component - For editing rich text
 export function SmartEditor(props: SmartEditorProps) {
   const ref = useRef<HTMLDivElement>();
   let isInitialMount = true;
+  let isMentioning = false; // Track if we're in mention mode to prevent premature submit
 
   if (props.apiRef) {
     // Expose imperative methods
@@ -244,6 +241,9 @@ export function SmartEditor(props: SmartEditorProps) {
       },
       getValue: () => {
         return htmlToRichText(ref.current?.innerHTML || "");
+      },
+      cancelMention: () => {
+        isMentioning = false;
       },
     });
   }
@@ -277,7 +277,7 @@ export function SmartEditor(props: SmartEditorProps) {
 
   // Notify changes (serialize innerHTML to RichText)
   const emitChange = () => {
-    if (!props.onSubmit || !ref.current) return;
+    if (!props.onSubmit || !ref.current || isMentioning) return;
     const richText = htmlToRichText(ref.current.innerHTML);
     props.onSubmit(richText);
   };
@@ -300,15 +300,16 @@ export function SmartEditor(props: SmartEditorProps) {
       const query = wordInfo.word.slice(1); // Remove the @
       const { range } = wordInfo;
 
+      // Disable submit while in mention mode
+      isMentioning = true;
+
       // Create the insertMention callback
-      const insertMention = (
-        entity: Extract<Resource, { type: "user" | "project" | "issue" }>
-      ) => {
+      const insertMention = (mention: Mention) => {
         // Remove the @query text
         range.deleteContents();
 
         // Create and insert the mention span
-        const mentionSpan = makeMentionSpan(entity);
+        const mentionSpan = makeMentionSpan(mention);
         range.insertNode(mentionSpan);
 
         // Add a space after the mention
@@ -322,6 +323,9 @@ export function SmartEditor(props: SmartEditorProps) {
         const sel = document.getSelection();
         sel?.removeAllRanges();
         sel?.addRange(range);
+
+        // Re-enable submit after mention is inserted
+        isMentioning = false;
       };
 
       // Call the onMention callback with query and insertMention
@@ -351,27 +355,15 @@ export function SmartEditor(props: SmartEditorProps) {
   }
 
   // Create mention span for user/project/issue
-  function makeMentionSpan(
-    entity: Extract<Resource, { type: "user" | "project" | "issue" }>
-  ) {
+  function makeMentionSpan(mention: Mention) {
     const span = document.createElement("span");
     span.setAttribute("contenteditable", "false");
 
-    switch (entity.type) {
+    switch (mention.type) {
       case "user":
-        span.setAttribute("data-user", entity.userId);
-        span.textContent = `@${entity.display}`;
+        span.setAttribute("data-user", mention.userId);
+        span.textContent = mention.displayName;
         span.className = "mention-person";
-        break;
-      case "project":
-        span.setAttribute("data-project", entity.projectId);
-        span.textContent = entity.display;
-        span.className = "mention-project";
-        break;
-      case "issue":
-        span.setAttribute("data-issue", entity.issueId);
-        span.textContent = `#${entity.display}`;
-        span.className = "mention-issue";
         break;
     }
 

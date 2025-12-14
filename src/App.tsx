@@ -5,10 +5,12 @@ import { TopBar } from "./components/TopBar";
 import { Calendar } from "./components/Calendar";
 import { DataContext } from "./contexts/DataContext";
 import { AuthModal } from "./components/AuthModal";
+import { JSONStorageContext } from "./contexts/JSONStorageContext";
 
 export function App() {
   FirebaseContext.inject();
   ThemeContext.inject();
+  JSONStorageContext.inject("divergent-teams");
   const authentication = AuthenticationContext.inject();
   DataContext.inject();
 
