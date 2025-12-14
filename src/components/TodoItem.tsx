@@ -3,37 +3,33 @@ import {
   RichTextDisplay,
   SmartEditor,
   type SmartEditorRef,
+  type RichText,
 } from "./SmartEditor";
 import type { Todo } from "../types";
 
 interface TodoItemProps {
   todo: Todo;
   onToggleTodoComplete: (todoId: string) => void;
-  onUpdateTodo?: (todoId: string, text: string) => void;
+  onUpdateTodo?: (todoId: string, richText: RichText) => void;
   onDeleteTodo?: (todoId: string) => void;
   onClick?: () => void;
   availableTags?: string[];
   isActive?: boolean;
 }
 
-// Helper function to check if HTML content is empty
-function isHtmlEmpty(html: string): boolean {
-  // Create a temporary div to parse the HTML
-  const temp = document.createElement("div");
-  temp.innerHTML = html;
-  // Get the text content and check if it's empty after trimming
-  return temp.textContent?.trim() === "";
+// Helper function to check if RichText content is empty
+function isRichTextEmpty(richText: RichText): boolean {
+  return richText.text.trim() === "" && richText.resources.length === 0;
 }
 
 export default function TodoItem(props: TodoItemProps) {
   const state = useState({
     isEditing: false,
-    editingHtml: props.todo.text,
   });
   const containerRef = useRef<HTMLDivElement>();
   const editorRef = useRef<SmartEditorRef>();
 
-  let originalHtmlRef = props.todo.text;
+  let originalRichTextRef = props.todo.richText;
   let lastClickTimeRef = 0;
   let clickTimeoutRef = null as ReturnType<typeof setTimeout> | null;
 
@@ -46,13 +42,20 @@ export default function TodoItem(props: TodoItemProps) {
         !containerRef.current.contains(event.target as Node) &&
         event.target instanceof Node // Ensure it's a real DOM event
       ) {
-        if (!isHtmlEmpty(state.editingHtml)) {
-          if (state.editingHtml !== props.todo.text) {
-            props.onUpdateTodo?.(props.todo.id, state.editingHtml);
+        const currentRichText = editorRef.current?.getValue();
+        if (currentRichText) {
+          if (!isRichTextEmpty(currentRichText)) {
+            // Only update if content changed
+            if (
+              JSON.stringify(currentRichText) !==
+              JSON.stringify(props.todo.richText)
+            ) {
+              props.onUpdateTodo?.(props.todo.id, currentRichText);
+            }
+          } else {
+            // Delete todo if content is empty
+            props.onDeleteTodo?.(props.todo.id);
           }
-        } else {
-          // Delete todo if content is empty
-          props.onDeleteTodo?.(props.todo.id);
         }
         state.isEditing = false;
       }
@@ -70,22 +73,10 @@ export default function TodoItem(props: TodoItemProps) {
   const handleKeyDown = (e: Rask.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Escape") {
       // Revert to original content
-      editorRef.current?.setHtml(originalHtmlRef);
-      state.editingHtml = originalHtmlRef;
+      editorRef.current?.setValue(originalRichTextRef);
       state.isEditing = false;
-    } else if (e.key === "Enter" && !e.shiftKey) {
-      // Only save on Enter without Shift (SHIFT + ENTER allows newlines)
-      e.preventDefault();
-      // Get the latest HTML from the editor (includes any tag conversions that just happened)
-      const currentHtml = editorRef.current?.getHtml() || state.editingHtml;
-      if (!isHtmlEmpty(currentHtml)) {
-        props.onUpdateTodo?.(props.todo.id, currentHtml);
-        state.isEditing = false;
-      } else {
-        // Delete todo if content is empty
-        props.onDeleteTodo?.(props.todo.id);
-      }
     }
+    // Note: Enter key handling is done by SmartEditor's onSubmit
   };
 
   const handleDoubleClick = (e: Rask.MouseEvent) => {
@@ -125,11 +116,39 @@ export default function TodoItem(props: TodoItemProps) {
 
     clickTimeoutRef = setTimeout(() => {
       // Save original content when entering edit mode
-      originalHtmlRef = props.todo.text;
-      state.editingHtml = props.todo.text;
+      originalRichTextRef = props.todo.richText;
       state.isEditing = true;
       clickTimeoutRef = null;
     }, 250);
+  };
+
+  const handleSubmit = (richText: RichText) => {
+    if (!isRichTextEmpty(richText)) {
+      props.onUpdateTodo?.(props.todo.id, richText);
+      state.isEditing = false;
+    } else {
+      // Delete todo if content is empty
+      props.onDeleteTodo?.(props.todo.id);
+    }
+  };
+
+  const handleBlur = () => {
+    const currentRichText = editorRef.current?.getValue();
+    if (currentRichText) {
+      if (!isRichTextEmpty(currentRichText)) {
+        // Only update if content changed
+        if (
+          JSON.stringify(currentRichText) !==
+          JSON.stringify(props.todo.richText)
+        ) {
+          props.onUpdateTodo?.(props.todo.id, currentRichText);
+        }
+      } else {
+        // Delete todo if content is empty
+        props.onDeleteTodo?.(props.todo.id);
+      }
+    }
+    state.isEditing = false;
   };
 
   return () => {
@@ -165,10 +184,10 @@ export default function TodoItem(props: TodoItemProps) {
               <SmartEditor
                 apiRef={editorRef}
                 initialValue={props.todo.richText}
-                editing={true}
-                onChange={(html) => (state.editingHtml = html)}
-                autoFocus={true}
+                onSubmit={handleSubmit}
+                focus={true}
                 onKeyDown={handleKeyDown}
+                onBlur={handleBlur}
                 availableTags={props.availableTags}
               />
             </div>
@@ -183,7 +202,7 @@ export default function TodoItem(props: TodoItemProps) {
           onClick={handleContainerClick}
           onDblClick={handleDoubleClick}
           onMouseDown={handleMouseDown}
-          className={`group/todo relative flex items-center gap-3 text-xs/5 transition-colors px-3 py-2 select-none focus:outline-none cursor-default bg-transparent ${
+          className={`group/todo relative flex gap-3 text-xs/5 transition-colors px-3 py-2 select-none focus:outline-none cursor-default bg-transparent ${
             props.isActive
               ? "!bg-(--color-bg-hover)"
               : "hover:bg-(--color-bg-hover)"
