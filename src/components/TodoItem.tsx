@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "rask-ui";
-import { SmartEditor, type SmartEditorRef } from "./SmartEditor";
-
-export interface Todo {
-  id: string;
-  text: string;
-  completed: boolean;
-}
+import {
+  RichTextDisplay,
+  SmartEditor,
+  type SmartEditorRef,
+} from "./SmartEditor";
+import type { Todo } from "../types";
 
 interface TodoItemProps {
   todo: Todo;
@@ -136,17 +135,83 @@ export default function TodoItem(props: TodoItemProps) {
     }, 250);
   };
 
-  if (state.isEditing) {
-    return () => (
-      <div className="mt-2 px-3 py-1" ref={containerRef}>
-        <div className="flex gap-3">
-          <div className="flex h-5 shrink-0 items-center">
+  return () => {
+    if (state.isEditing) {
+      return (
+        <div className="mt-2 px-3 py-1" ref={containerRef}>
+          <div className="flex gap-3">
+            <div className="flex h-5 shrink-0 items-center">
+              <div className="group/checkbox grid size-4 grid-cols-1">
+                <input
+                  disabled
+                  type="checkbox"
+                  checked={props.todo.completed}
+                  readOnly
+                  className="col-start-1 row-start-1 appearance-none rounded-sm border border-[var(--color-border-secondary)] bg-[var(--color-bg-primary)] checked:border-[var(--color-accent-primary)] checked:bg-[var(--color-accent-primary)] indeterminate:border-[var(--color-accent-primary)] indeterminate:bg-[var(--color-accent-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-primary)] disabled:border-[var(--color-border-secondary)] disabled:bg-[var(--color-bg-secondary)] disabled:checked:bg-[var(--color-bg-secondary)] forced-colors:appearance-auto"
+                />
+                <svg
+                  fill="none"
+                  viewBox="0 0 14 14"
+                  className="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white group-has-disabled/checkbox:stroke-[var(--color-text-secondary)]"
+                >
+                  <path
+                    d="M3 8L6 11L11 3.5"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="opacity-0 group-has-checked/checkbox:opacity-100"
+                  />
+                </svg>
+              </div>
+            </div>
+            <div className="flex-1 min-w-0 text-xs/5 text-[var(--color-text-primary)]">
+              <SmartEditor
+                apiRef={editorRef}
+                initialValue={props.todo.richText}
+                editing={true}
+                onChange={(html) => (state.editingHtml = html)}
+                autoFocus={true}
+                onKeyDown={handleKeyDown}
+                availableTags={props.availableTags}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-2 relative">
+        <div
+          onClick={handleContainerClick}
+          onDblClick={handleDoubleClick}
+          onMouseDown={handleMouseDown}
+          onMouseUp={() => (state.isPressed = false)}
+          onMouseLeave={() => (state.isPressed = false)}
+          className={`group/todo relative flex gap-3 text-xs/5 transition-colors px-3 py-1 select-none focus:outline-none cursor-default bg-transparent ${
+            !props.isActive && !state.isPressed
+              ? "hover:bg-[var(--color-bg-hover)]"
+              : ""
+          } ${
+            state.isPressed
+              ? "!bg-[var(--color-bg-active)]"
+              : props.isActive
+              ? "!bg-[var(--color-bg-hover)]"
+              : ""
+          } ${props.todo.completed ? "opacity-60" : ""}`}
+        >
+          <div
+            className="flex h-5 shrink-0 items-center"
+            onClick={(e) => e.stopPropagation()}
+            onDblClick={(e) => e.stopPropagation()}
+          >
             <div className="group/checkbox grid size-4 grid-cols-1">
               <input
-                disabled
+                id={`todo-${props.todo.id}`}
+                name="todo"
                 type="checkbox"
                 checked={props.todo.completed}
-                readOnly
+                onChange={() => props.onToggleTodoComplete(props.todo.id)}
                 className="col-start-1 row-start-1 appearance-none rounded-sm border border-[var(--color-border-secondary)] bg-[var(--color-bg-primary)] checked:border-[var(--color-accent-primary)] checked:bg-[var(--color-accent-primary)] indeterminate:border-[var(--color-accent-primary)] indeterminate:bg-[var(--color-accent-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-primary)] disabled:border-[var(--color-border-secondary)] disabled:bg-[var(--color-bg-secondary)] disabled:checked:bg-[var(--color-bg-secondary)] forced-colors:appearance-auto"
               />
               <svg
@@ -164,81 +229,17 @@ export default function TodoItem(props: TodoItemProps) {
               </svg>
             </div>
           </div>
-          <div className="flex-1 min-w-0 text-xs/5 text-[var(--color-text-primary)]">
-            <SmartEditor
-              apiRef={editorRef}
-              html={state.editingHtml}
-              editing={true}
-              onChange={(html) => (state.editingHtml = html)}
-              autoFocus={true}
-              onKeyDown={handleKeyDown}
-              availableTags={props.availableTags}
-            />
+          <div
+            className={`flex-1 min-w-0 text-xs/5 select-none ${
+              props.todo.completed
+                ? "line-through text-[var(--color-text-secondary)]"
+                : "text-[var(--color-text-primary)]"
+            }`}
+          >
+            <RichTextDisplay value={props.todo.richText} />
           </div>
         </div>
       </div>
     );
-  }
-
-  return () => (
-    <div className="mt-2 relative">
-      <div
-        onClick={handleContainerClick}
-        onDblClick={handleDoubleClick}
-        onMouseDown={handleMouseDown}
-        onMouseUp={() => (state.isPressed = false)}
-        onMouseLeave={() => (state.isPressed = false)}
-        className={`group/todo relative flex gap-3 text-xs/5 transition-colors px-3 py-1 select-none focus:outline-none cursor-default bg-transparent ${
-          !props.isActive && !state.isPressed
-            ? "hover:bg-[var(--color-bg-hover)]"
-            : ""
-        } ${
-          state.isPressed
-            ? "!bg-[var(--color-bg-active)]"
-            : props.isActive
-            ? "!bg-[var(--color-bg-hover)]"
-            : ""
-        } ${props.todo.completed ? "opacity-60" : ""}`}
-      >
-        <div
-          className="flex h-5 shrink-0 items-center"
-          onClick={(e) => e.stopPropagation()}
-          onDblClick={(e) => e.stopPropagation()}
-        >
-          <div className="group/checkbox grid size-4 grid-cols-1">
-            <input
-              id={`todo-${props.todo.id}`}
-              name="todo"
-              type="checkbox"
-              checked={props.todo.completed}
-              onChange={() => props.onToggleTodoComplete(props.todo.id)}
-              className="col-start-1 row-start-1 appearance-none rounded-sm border border-[var(--color-border-secondary)] bg-[var(--color-bg-primary)] checked:border-[var(--color-accent-primary)] checked:bg-[var(--color-accent-primary)] indeterminate:border-[var(--color-accent-primary)] indeterminate:bg-[var(--color-accent-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-primary)] disabled:border-[var(--color-border-secondary)] disabled:bg-[var(--color-bg-secondary)] disabled:checked:bg-[var(--color-bg-secondary)] forced-colors:appearance-auto"
-            />
-            <svg
-              fill="none"
-              viewBox="0 0 14 14"
-              className="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white group-has-disabled/checkbox:stroke-[var(--color-text-secondary)]"
-            >
-              <path
-                d="M3 8L6 11L11 3.5"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="opacity-0 group-has-checked/checkbox:opacity-100"
-              />
-            </svg>
-          </div>
-        </div>
-        <div
-          className={`flex-1 min-w-0 text-xs/5 select-none ${
-            props.todo.completed
-              ? "line-through text-[var(--color-text-secondary)]"
-              : "text-[var(--color-text-primary)]"
-          }`}
-        >
-          <SmartEditor html={props.todo.text} editing={false} />
-        </div>
-      </div>
-    </div>
-  );
+  };
 }

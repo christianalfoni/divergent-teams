@@ -4,6 +4,7 @@ import type { Todo } from "../types";
 import { doc, serverTimestamp, setDoc, Timestamp } from "firebase/firestore";
 import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import { DataContext } from "../contexts/DataContext";
+import type { RichText } from "../components/SmartEditor";
 
 export function useAddTodo() {
   const firebase = FirebaseContext.use();
@@ -11,7 +12,7 @@ export function useAddTodo() {
   const data = DataContext.use();
 
   const [state, add] = useAction(
-    async (params: { description: string; date: Date; position: string }) => {
+    async (params: { richText: RichText; date: Date; position: string }) => {
       if (!authentication.user) {
         throw new Error("You are not authenticated");
       }
@@ -25,7 +26,7 @@ export function useAddTodo() {
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         date: Timestamp.fromDate(params.date),
-        description: params.description,
+        richText: params.richText,
         position: params.position,
         userId: authentication.user.id,
       };

@@ -1,4 +1,5 @@
 import type { Timestamp } from "firebase/firestore";
+import type { Resource, RichText } from "./components/SmartEditor";
 
 export interface Conversation {
   id: string;
@@ -37,7 +38,7 @@ export interface Project {
 export interface Todo {
   id: string;
   userId: string;
-  description: string;
+  richText: RichText;
   completed: boolean;
   date: Timestamp;
   position: string; // Fractional index for ordering

@@ -188,4 +188,190 @@
   [data-font-size="large"] {
     --todo-text-size: 0.9375rem; /* 15px */
   }
+
+  /* SmartEditor and RichTextDisplay styles */
+  .smartlinks {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: var(--todo-text-size);
+    min-height: 1.5rem;
+  }
+
+  .smartlinks.is-editing {
+    outline: none;
+  }
+
+  .smartlink-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 6px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border-secondary);
+    background: var(--color-bg-hover);
+    line-height: 1.4;
+    margin: 0 1px;
+    user-select: none;
+    font-size: inherit;
+    color: var(--color-accent-text);
+  }
+
+  .smartlink-chip::after {
+    content: "↗";
+    font-size: 0.8em;
+    margin-left: 4px;
+    opacity: 0.6;
+  }
+
+  .tag-pill {
+    position: relative;
+    top: -1px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0px 6px;
+    border-radius: 6px;
+    line-height: 1.4;
+    margin: 0 1px;
+    user-select: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    vertical-align: baseline;
+  }
+
+  .line-through .tag-pill {
+    text-decoration: line-through;
+  }
+
+  .mention-person,
+  .mention-project,
+  .mention-issue {
+    display: inline;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    margin: 0;
+    font-weight: 600;
+    position: static;
+    top: auto;
+  }
+
+  .mention-person {
+    color: rgb(133 77 14);
+  }
+
+  .mention-project {
+    color: rgb(185 28 28);
+  }
+
+  .mention-issue {
+    color: rgb(21 128 61);
+  }
+
+  .tag-pill-gray {
+    background: rgb(243 244 246);
+    color: rgb(75 85 99);
+  }
+
+  .tag-pill-red {
+    background: rgb(254 226 226);
+    color: rgb(185 28 28);
+  }
+
+  .tag-pill-yellow {
+    background: rgb(254 249 195);
+    color: rgb(133 77 14);
+  }
+
+  .tag-pill-green {
+    background: rgb(220 252 231);
+    color: rgb(21 128 61);
+  }
+
+  .tag-pill-blue {
+    background: rgb(219 234 254);
+    color: rgb(29 78 216);
+  }
+
+  .tag-pill-indigo {
+    background: rgb(224 231 255);
+    color: rgb(67 56 202);
+  }
+
+  .tag-pill-purple {
+    background: rgb(243 232 255);
+    color: rgb(126 34 206);
+  }
+
+  .tag-pill-pink {
+    background: rgb(252 231 243);
+    color: rgb(190 24 93);
+  }
+
+  .smartlink-anchor {
+    color: var(--color-accent-text);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .smartlink-anchor:hover {
+    color: var(--color-accent-text-hover);
+  }
+
+  .smartlinks.is-editing .smartlink-anchor {
+    pointer-events: none;
+  }
+
+  /* Dark mode overrides for mentions and tags */
+  @media (prefers-color-scheme: dark) {
+    .mention-person {
+      color: rgb(234 179 8);
+    }
+
+    .mention-project {
+      color: rgb(248 113 113);
+    }
+
+    .mention-issue {
+      color: rgb(74 222 128);
+    }
+
+    .tag-pill-gray {
+      background: rgb(156 163 175 / 0.1);
+      color: rgb(156 163 175);
+    }
+
+    .tag-pill-red {
+      background: rgb(248 113 113 / 0.1);
+      color: rgb(248 113 113);
+    }
+
+    .tag-pill-yellow {
+      background: rgb(234 179 8 / 0.1);
+      color: rgb(234 179 8);
+    }
+
+    .tag-pill-green {
+      background: rgb(74 222 128 / 0.1);
+      color: rgb(74 222 128);
+    }
+
+    .tag-pill-blue {
+      background: rgb(96 165 250 / 0.1);
+      color: rgb(96 165 250);
+    }
+
+    .tag-pill-indigo {
+      background: rgb(129 140 248 / 0.1);
+      color: rgb(129 140 248);
+    }
+
+    .tag-pill-purple {
+      background: rgb(192 132 252 / 0.1);
+      color: rgb(192 132 252);
+    }
+
+    .tag-pill-pink {
+      background: rgb(244 114 182 / 0.1);
+      color: rgb(244 114 182);
+    }
+  }
 }

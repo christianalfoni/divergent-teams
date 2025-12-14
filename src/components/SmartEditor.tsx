@@ -1,17 +1,17 @@
 import { assignRef, useMountEffect, useRef, type Ref } from "rask-ui";
 
 // Entity types
-export type Entity =
-  | { type: 'tag'; tag: string }
-  | { type: 'user'; userId: string; display: string }
-  | { type: 'project'; projectId: string; display: string }
-  | { type: 'issue'; issueId: string; display: string }
-  | { type: 'link'; url: string; display: string };
+export type Resource =
+  | { type: "tag"; tag: string }
+  | { type: "user"; userId: string; display: string }
+  | { type: "project"; projectId: string; display: string }
+  | { type: "issue"; issueId: string; display: string }
+  | { type: "link"; url: string; display: string };
 
 // Rich text structure
 export type RichText = {
-  text: string;      // Contains [[0]], [[1]], etc.
-  entities: Entity[];
+  text: string; // Contains [[0]], [[1]], etc.
+  resources: Resource[];
 };
 
 type SmartEditorProps = {
@@ -23,7 +23,12 @@ type SmartEditorProps = {
   onKeyDown?: (e: Rask.KeyboardEvent<HTMLDivElement>) => void;
   onBlur?: () => void;
   availableTags?: string[]; // List of all tag texts from other todos for autocomplete
-  onMention?: (query: string, insertMention: (entity: Extract<Entity, { type: 'user' | 'project' | 'issue' }>) => void) => void;
+  onMention?: (
+    query: string,
+    insertMention: (
+      entity: Extract<Resource, { type: "user" | "project" | "issue" }>
+    ) => void
+  ) => void;
 };
 
 type RichTextDisplayProps = {
@@ -46,25 +51,25 @@ const TAG_REGEX = /^#(\w+)$/;
 function richTextToHtml(data: RichText): string {
   let html = data.text;
 
-  data.entities.forEach((entity, i) => {
+  data.resources.forEach((entity, i) => {
     const placeholder = `[[${i}]]`;
-    let replacement = '';
+    let replacement = "";
 
     switch (entity.type) {
-      case 'tag':
+      case "tag":
         const color = getTagColor(entity.tag);
         replacement = `<span data-tag="${entity.tag}" contenteditable="false" class="tag-pill tag-pill-${color}">${entity.tag}</span>`;
         break;
-      case 'link':
+      case "link":
         replacement = `<span data-url="${entity.url}" contenteditable="false" class="smartlink-chip">${entity.display}</span>`;
         break;
-      case 'user':
+      case "user":
         replacement = `<span data-user="${entity.userId}" contenteditable="false" class="mention-person">@${entity.display}</span>`;
         break;
-      case 'project':
+      case "project":
         replacement = `<span data-project="${entity.projectId}" contenteditable="false" class="mention-project">${entity.display}</span>`;
         break;
-      case 'issue':
+      case "issue":
         replacement = `<span data-issue="${entity.issueId}" contenteditable="false" class="mention-issue">#${entity.display}</span>`;
         break;
     }
@@ -77,45 +82,60 @@ function richTextToHtml(data: RichText): string {
 
 // Convert HTML -> RichText (when onChange fires)
 function htmlToRichText(html: string): RichText {
-  const entities: Entity[] = [];
+  const entities: Resource[] = [];
   let index = 0;
   let text = html;
 
   // Replace tags
-  text = text.replace(/<span data-tag="([^"]+)"[^>]*>([^<]*)<\/span>/g, (match, tag) => {
-    entities.push({ type: 'tag', tag });
-    return `[[${index++}]]`;
-  });
+  text = text.replace(
+    /<span data-tag="([^"]+)"[^>]*>([^<]*)<\/span>/g,
+    (match, tag) => {
+      entities.push({ type: "tag", tag });
+      return `[[${index++}]]`;
+    }
+  );
 
   // Replace links
-  text = text.replace(/<span data-url="([^"]+)"[^>]*>([^<]*)<\/span>/g, (match, url, display) => {
-    entities.push({ type: 'link', url, display });
-    return `[[${index++}]]`;
-  });
+  text = text.replace(
+    /<span data-url="([^"]+)"[^>]*>([^<]*)<\/span>/g,
+    (match, url, display) => {
+      entities.push({ type: "link", url, display });
+      return `[[${index++}]]`;
+    }
+  );
 
   // Replace user mentions
-  text = text.replace(/<span data-user="([^"]+)"[^>]*>@([^<]*)<\/span>/g, (match, userId, display) => {
-    entities.push({ type: 'user', userId, display });
-    return `[[${index++}]]`;
-  });
+  text = text.replace(
+    /<span data-user="([^"]+)"[^>]*>@([^<]*)<\/span>/g,
+    (match, userId, display) => {
+      entities.push({ type: "user", userId, display });
+      return `[[${index++}]]`;
+    }
+  );
 
   // Replace project mentions
-  text = text.replace(/<span data-project="([^"]+)"[^>]*>([^<]*)<\/span>/g, (match, projectId, display) => {
-    entities.push({ type: 'project', projectId, display });
-    return `[[${index++}]]`;
-  });
+  text = text.replace(
+    /<span data-project="([^"]+)"[^>]*>([^<]*)<\/span>/g,
+    (match, projectId, display) => {
+      entities.push({ type: "project", projectId, display });
+      return `[[${index++}]]`;
+    }
+  );
 
   // Replace issue mentions
-  text = text.replace(/<span data-issue="([^"]+)"[^>]*>#([^<]*)<\/span>/g, (match, issueId, display) => {
-    entities.push({ type: 'issue', issueId, display });
-    return `[[${index++}]]`;
-  });
+  text = text.replace(
+    /<span data-issue="([^"]+)"[^>]*>#([^<]*)<\/span>/g,
+    (match, issueId, display) => {
+      entities.push({ type: "issue", issueId, display });
+      return `[[${index++}]]`;
+    }
+  );
 
   // Strip any remaining HTML tags and decode entities
-  text = text.replace(/<[^>]+>/g, '');
-  text = text.replace(/&nbsp;/g, ' ');
+  text = text.replace(/<[^>]+>/g, "");
+  text = text.replace(/&nbsp;/g, " ");
 
-  return { text, entities };
+  return { text, resources: entities };
 }
 
 // RichTextDisplay Component - For displaying rich text (view only)
@@ -127,10 +147,10 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
 
     if (match) {
       const entityIndex = parseInt(match[1]);
-      const entity = props.value.entities[entityIndex];
+      const entity = props.value.resources[entityIndex];
 
       switch (entity.type) {
-        case 'tag':
+        case "tag":
           const color = getTagColor(entity.tag);
           return (
             <span key={i} className={`tag-pill tag-pill-${color}`}>
@@ -138,7 +158,7 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
             </span>
           );
 
-        case 'link':
+        case "link":
           return (
             <a
               key={i}
@@ -149,44 +169,44 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                window.open(entity.url, '_blank');
+                window.open(entity.url, "_blank");
               }}
             >
               {entity.display}
             </a>
           );
 
-        case 'user':
+        case "user":
           return (
             <span
               key={i}
               className="mention-person"
               onClick={() => props.onUserClick?.(entity.userId)}
-              style={{ cursor: props.onUserClick ? 'pointer' : 'default' }}
+              style={{ cursor: props.onUserClick ? "pointer" : "default" }}
             >
               @{entity.display}
             </span>
           );
 
-        case 'project':
+        case "project":
           return (
             <span
               key={i}
               className="mention-project"
               onClick={() => props.onProjectClick?.(entity.projectId)}
-              style={{ cursor: props.onProjectClick ? 'pointer' : 'default' }}
+              style={{ cursor: props.onProjectClick ? "pointer" : "default" }}
             >
               {entity.display}
             </span>
           );
 
-        case 'issue':
+        case "issue":
           return (
             <span
               key={i}
               className="mention-issue"
               onClick={() => props.onIssueClick?.(entity.issueId)}
-              style={{ cursor: props.onIssueClick ? 'pointer' : 'default' }}
+              style={{ cursor: props.onIssueClick ? "pointer" : "default" }}
             >
               #{entity.display}
             </span>
@@ -198,15 +218,7 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
   });
 
   return () => (
-    <div
-      className="smartlinks is-view"
-      style={{
-        "white-space": "pre-wrap",
-        "word-break": "break-word",
-        "font-size": "var(--todo-text-size)",
-        "min-height": "1.5rem",
-      }}
-    >
+    <div className="smartlinks is-view">
       {content}
     </div>
   );
@@ -272,7 +284,6 @@ export function SmartEditor(props: SmartEditorProps) {
 
   // Handle input to update shadow and check for mentions
   const handleInput = () => {
-    emitChange();
     updateShadow();
     checkForMention();
   };
@@ -285,12 +296,14 @@ export function SmartEditor(props: SmartEditorProps) {
     if (!wordInfo) return;
 
     // Check if the word starts with @
-    if (wordInfo.word.startsWith('@')) {
+    if (wordInfo.word.startsWith("@")) {
       const query = wordInfo.word.slice(1); // Remove the @
       const { range } = wordInfo;
 
       // Create the insertMention callback
-      const insertMention = (entity: Extract<Entity, { type: 'user' | 'project' | 'issue' }>) => {
+      const insertMention = (
+        entity: Extract<Resource, { type: "user" | "project" | "issue" }>
+      ) => {
         // Remove the @query text
         range.deleteContents();
 
@@ -309,9 +322,6 @@ export function SmartEditor(props: SmartEditorProps) {
         const sel = document.getSelection();
         sel?.removeAllRanges();
         sel?.addRange(range);
-
-        // Emit change
-        emitChange();
       };
 
       // Call the onMention callback with query and insertMention
@@ -341,22 +351,24 @@ export function SmartEditor(props: SmartEditorProps) {
   }
 
   // Create mention span for user/project/issue
-  function makeMentionSpan(entity: Extract<Entity, { type: 'user' | 'project' | 'issue' }>) {
+  function makeMentionSpan(
+    entity: Extract<Resource, { type: "user" | "project" | "issue" }>
+  ) {
     const span = document.createElement("span");
     span.setAttribute("contenteditable", "false");
 
     switch (entity.type) {
-      case 'user':
+      case "user":
         span.setAttribute("data-user", entity.userId);
         span.textContent = `@${entity.display}`;
         span.className = "mention-person";
         break;
-      case 'project':
+      case "project":
         span.setAttribute("data-project", entity.projectId);
         span.textContent = entity.display;
         span.className = "mention-project";
         break;
-      case 'issue':
+      case "issue":
         span.setAttribute("data-issue", entity.issueId);
         span.textContent = `#${entity.display}`;
         span.className = "mention-issue";
@@ -378,7 +390,6 @@ export function SmartEditor(props: SmartEditorProps) {
       insertNodeAtSelection(chip);
       // add a trailing space so you can keep typing naturally
       insertNodeAtSelection(document.createTextNode(" "));
-      emitChange();
     } else {
       // For plain text paste, prevent default and insert as plain text
       e.preventDefault();
@@ -529,6 +540,8 @@ export function SmartEditor(props: SmartEditorProps) {
 
   // Handle tag and link conversion on space
   const onKeyDown = (e: Rask.KeyboardEvent<HTMLDivElement>) => {
+    // Track if we already submitted (e.g., during tag conversion)
+    let alreadySubmitted = false;
 
     // Handle Tab for autocomplete BEFORE external handler
     if (e.key === "Tab") {
@@ -565,7 +578,6 @@ export function SmartEditor(props: SmartEditorProps) {
           sel?.removeAllRanges();
           sel?.addRange(range);
 
-          emitChange();
           return;
         } else {
           // If typing a tag but no suggestion, still prevent default tab
@@ -606,6 +618,7 @@ export function SmartEditor(props: SmartEditorProps) {
             sel?.removeAllRanges();
             sel?.addRange(range);
             emitChange();
+            alreadySubmitted = true;
             // Don't prevent default - let Enter propagate to external handler
             // Fall through to call external handler below
           } else {
@@ -622,14 +635,21 @@ export function SmartEditor(props: SmartEditorProps) {
             sel?.removeAllRanges();
             sel?.addRange(range);
 
-            emitChange();
             return;
           }
         }
       }
     }
 
-    // Call external handler if provided
+    // Submit on Enter if not already submitted
+    if (e.key === "Enter" && !e.shiftKey) {
+      if (!alreadySubmitted) {
+        emitChange();
+      }
+      return; // Don't call external handler for Enter - it's handled by onSubmit
+    }
+
+    // Call external handler if provided (but not for Enter)
     if (props.onKeyDown) {
       props.onKeyDown(e);
       if (e.defaultPrevented) return;
@@ -654,7 +674,6 @@ export function SmartEditor(props: SmartEditorProps) {
         ) {
           e.preventDefault();
           (node as HTMLElement).remove();
-          emitChange();
         }
         return;
       }
@@ -672,7 +691,6 @@ export function SmartEditor(props: SmartEditorProps) {
         ) {
           e.preventDefault();
           prevNode.remove();
-          emitChange();
         }
       }
     }
@@ -685,175 +703,22 @@ export function SmartEditor(props: SmartEditorProps) {
       return;
     }
 
+    emitChange(); // Submit on blur
     if (props.onBlur) {
       props.onBlur();
     }
   };
 
   return () => (
-    <>
-      <div
-        ref={ref}
-        className="smartlinks is-editing"
-        onPaste={onPaste}
-        onInput={handleInput}
-        onKeyDown={onKeyDown}
-        onBlur={handleBlur}
-        data-placeholder={props.placeholder}
-        style={{
-          outline: "none",
-          "white-space": "pre-wrap",
-          "word-break": "break-word",
-          "font-size": "var(--todo-text-size)",
-          "min-height": "1.5rem",
-        }}
-      />
-      <style>{`
-        .smartlink-chip {
-          display: inline-flex;
-          align-items: center;
-          padding: 0 6px;
-          border-radius: 6px;
-          border: 1px solid var(--color-border-secondary);
-          background: var(--color-bg-hover);
-          line-height: 1.4;
-          margin: 0 1px;
-          user-select: none;
-          font-size: inherit;
-          color: var(--color-accent-text);
-        }
-        .smartlink-chip::after {
-          content: "↗";
-          font-size: 0.8em;
-          margin-left: 4px;
-          opacity: 0.6;
-        }
-        .tag-pill {
-          position: relative;
-          top: -1px;
-          display: inline-flex;
-          align-items: center;
-          padding: 0px 6px;
-          border-radius: 6px;
-          line-height: 1.4;
-          margin: 0 1px;
-          user-select: none;
-          font-size: 0.75rem;
-          font-weight: 500;
-          vertical-align: baseline;
-        }
-        .line-through .tag-pill {
-          text-decoration: line-through;
-        }
-        .mention-person,
-        .mention-project,
-        .mention-issue {
-          display: inline;
-          padding: 0;
-          border-radius: 0;
-          background: transparent;
-          margin: 0;
-          font-weight: 600;
-          position: static;
-          top: auto;
-        }
-        .mention-person {
-          color: rgb(133 77 14);
-        }
-        .mention-project {
-          color: rgb(185 28 28);
-        }
-        .mention-issue {
-          color: rgb(21 128 61);
-        }
-        .tag-pill-gray {
-          background: rgb(243 244 246);
-          color: rgb(75 85 99);
-        }
-        .tag-pill-red {
-          background: rgb(254 226 226);
-          color: rgb(185 28 28);
-        }
-        .tag-pill-yellow {
-          background: rgb(254 249 195);
-          color: rgb(133 77 14);
-        }
-        .tag-pill-green {
-          background: rgb(220 252 231);
-          color: rgb(21 128 61);
-        }
-        .tag-pill-blue {
-          background: rgb(219 234 254);
-          color: rgb(29 78 216);
-        }
-        .tag-pill-indigo {
-          background: rgb(224 231 255);
-          color: rgb(67 56 202);
-        }
-        .tag-pill-purple {
-          background: rgb(243 232 255);
-          color: rgb(126 34 206);
-        }
-        .tag-pill-pink {
-          background: rgb(252 231 243);
-          color: rgb(190 24 93);
-        }
-        @media (prefers-color-scheme: dark) {
-          .mention-person {
-            color: rgb(234 179 8);
-          }
-          .mention-project {
-            color: rgb(248 113 113);
-          }
-          .mention-issue {
-            color: rgb(74 222 128);
-          }
-          .tag-pill-gray {
-            background: rgb(156 163 175 / 0.1);
-            color: rgb(156 163 175);
-          }
-          .tag-pill-red {
-            background: rgb(248 113 113 / 0.1);
-            color: rgb(248 113 113);
-          }
-          .tag-pill-yellow {
-            background: rgb(234 179 8 / 0.1);
-            color: rgb(234 179 8);
-          }
-          .tag-pill-green {
-            background: rgb(74 222 128 / 0.1);
-            color: rgb(74 222 128);
-          }
-          .tag-pill-blue {
-            background: rgb(96 165 250 / 0.1);
-            color: rgb(96 165 250);
-          }
-          .tag-pill-indigo {
-            background: rgb(129 140 248 / 0.1);
-            color: rgb(129 140 248);
-          }
-          .tag-pill-purple {
-            background: rgb(192 132 252 / 0.1);
-            color: rgb(192 132 252);
-          }
-          .tag-pill-pink {
-            background: rgb(244 114 182 / 0.1);
-            color: rgb(244 114 182);
-          }
-        }
-        .smartlink-anchor {
-          color: var(--color-accent-text);
-          text-decoration: underline;
-          cursor: pointer;
-        }
-        .smartlink-anchor:hover {
-          color: var(--color-accent-text-hover);
-        }
-        .smartlinks.is-editing .smartlink-anchor {
-          pointer-events: none;
-        }
-      `}</style>
-    </>
+    <div
+      ref={ref}
+      className="smartlinks is-editing"
+      onPaste={onPaste}
+      onInput={handleInput}
+      onKeyDown={onKeyDown}
+      onBlur={handleBlur}
+      data-placeholder={props.placeholder}
+    />
   );
 }
 

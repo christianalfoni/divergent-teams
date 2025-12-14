@@ -1,39 +1,37 @@
 import { useEffect, useState, useRef } from "rask-ui";
 import TodoItem from "./TodoItem";
 import { getCurrentDayIndex, getWeekdays } from "../utils/calendar";
-import {
-  SmartEditor,
-  type SmartEditorRef,
-  type RichText,
-  type Entity,
-} from "./SmartEditor";
+import { SmartEditor, type SmartEditorRef, type Resource } from "./SmartEditor";
 import { MentionPalette } from "./MentionPalette";
 import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import { TodosLoadingPlaceholder } from "./TodosLoadingPlaceholder";
+import { useAddTodo } from "../hooks/useAddTodo";
+import { DataContext } from "../contexts/DataContext";
 
 // Collapsed column width
 const COLLAPSED_WIDTH = 100;
 
 export function Calendar() {
   const authentication = AuthenticationContext.use();
+  const data = DataContext.use();
   const weekdays = getWeekdays();
   const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri"];
   const columnRefs = [] as any[];
   const editorRefs = weekdays.map(() => useRef<SmartEditorRef>());
   const currentDayIndex = getCurrentDayIndex();
+  const addTodo = useAddTodo();
 
   const state = useState({
     ...calculateWidths(),
     isTransitioning: false,
     expandedTodo: null as any,
     addingTodoDayIndex: null as number | null,
-    newTodoRichText: null as RichText | null,
     mentionPalette: {
       open: false,
       query: "",
       insertMention: null as
         | ((
-            entity: Extract<Entity, { type: "user" | "project" | "issue" }>
+            entity: Extract<Resource, { type: "user" | "project" | "issue" }>
           ) => void)
         | null,
     },
@@ -131,10 +129,10 @@ export function Calendar() {
                         "opacity 350ms cubic-bezier(0.4, 0.0, 0.2, 1)",
                     }}
                   >
-                    {authentication.isAuthenticating ? (
+                    {authentication.isAuthenticating || data.isLoading ? (
                       <TodosLoadingPlaceholder />
                     ) : (
-                      [].map((todo) => (
+                      data.todos.map((todo) => (
                         <TodoItem
                           key={todo.id}
                           todo={todo}
@@ -204,10 +202,20 @@ export function Calendar() {
                           >
                             <SmartEditor
                               apiRef={editorRefs[index]}
-                              initialValue={state.newTodoRichText || undefined}
-                              onSubmit={(richText) =>
-                                (state.newTodoRichText = richText)
-                              }
+                              initialValue={{ resources: [], text: "" }}
+                              onSubmit={(richText) => {
+                                // Clear and close editor
+                                editorRefs[index].current?.clear();
+                                state.addingTodoDayIndex = null;
+
+                                if (richText.text) {
+                                  addTodo.add({
+                                    richText,
+                                    date,
+                                    position: "",
+                                  });
+                                }
+                              }}
                               placeholder="Description..."
                               focus={true}
                               onKeyDown={(e) => handleEditorKeyDown(e, index)}
@@ -291,14 +299,12 @@ export function Calendar() {
   function handleAddTodoClick(e: any, dayIndex: number) {
     e.stopPropagation();
     state.addingTodoDayIndex = dayIndex;
-    state.newTodoRichText = null;
   }
 
   // Handle editor key down
   function handleEditorKeyDown(e: any, dayIndex: number) {
     if (e.key === "Escape") {
       editorRefs[dayIndex].current?.clear();
-      state.newTodoRichText = null;
       state.addingTodoDayIndex = null;
     } else if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -317,7 +323,6 @@ export function Calendar() {
         );
         // Clear and close editor
         editorRefs[dayIndex].current?.clear();
-        state.newTodoRichText = null;
         state.addingTodoDayIndex = null;
       }
     }
@@ -346,7 +351,6 @@ export function Calendar() {
 
     // Clear and close editor
     editorRefs[dayIndex].current?.clear();
-    state.newTodoRichText = null;
     state.addingTodoDayIndex = null;
   }
 

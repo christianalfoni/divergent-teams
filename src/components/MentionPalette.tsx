@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "rask-ui";
-import type { Entity } from "./SmartEditor";
+import type { Resource } from "./SmartEditor";
 
 type MentionItem = {
   id: string;
@@ -19,7 +19,7 @@ type Props = {
   open: boolean;
   query: string;
   onSelect: (
-    entity: Extract<Entity, { type: "user" | "project" | "issue" }>
+    entity: Extract<Resource, { type: "user" | "project" | "issue" }>
   ) => void;
   onClose: () => void;
 };
@@ -198,7 +198,7 @@ export function MentionPalette(props: Props) {
   state.activeItem = filteredItems[state.selectedIndex] || null;
 
   const handleSelect = (item: MentionItem) => {
-    let entity: Extract<Entity, { type: "user" | "project" | "issue" }>;
+    let entity: Extract<Resource, { type: "user" | "project" | "issue" }>;
 
     switch (item.type) {
       case "user":
