@@ -211,6 +211,8 @@
 
   /* SmartEditor and RichTextDisplay styles */
   .smartlinks {
+    display: flex;
+    align-items: center;
     white-space: pre-wrap;
     word-break: break-word;
     font-size: var(--todo-text-size);
@@ -244,7 +246,6 @@
 
   .tag-pill {
     position: relative;
-    top: -1px;
     display: inline-flex;
     align-items: center;
     padding: 0px 6px;

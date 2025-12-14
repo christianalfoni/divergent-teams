@@ -29,7 +29,6 @@ export default function TodoItem(props: TodoItemProps) {
   const state = useState({
     isEditing: false,
     editingHtml: props.todo.text,
-    isPressed: false,
   });
   const containerRef = useRef<HTMLDivElement>();
   const editorRef = useRef<SmartEditorRef>();
@@ -109,8 +108,6 @@ export default function TodoItem(props: TodoItemProps) {
     if (timeSinceLastClick < 300) {
       return;
     }
-
-    state.isPressed = true;
   };
 
   const handleContainerClick = (e: Rask.MouseEvent) => {
@@ -138,8 +135,8 @@ export default function TodoItem(props: TodoItemProps) {
   return () => {
     if (state.isEditing) {
       return (
-        <div className="mt-2 px-3 py-1" ref={containerRef}>
-          <div className="flex gap-3">
+        <div className="px-3 py-2" ref={containerRef}>
+          <div className="flex items-center gap-3">
             <div className="flex h-5 shrink-0 items-center">
               <div className="group/checkbox grid size-4 grid-cols-1">
                 <input
@@ -147,12 +144,12 @@ export default function TodoItem(props: TodoItemProps) {
                   type="checkbox"
                   checked={props.todo.completed}
                   readOnly
-                  className="col-start-1 row-start-1 appearance-none rounded-sm border border-[var(--color-border-secondary)] bg-[var(--color-bg-primary)] checked:border-[var(--color-accent-primary)] checked:bg-[var(--color-accent-primary)] indeterminate:border-[var(--color-accent-primary)] indeterminate:bg-[var(--color-accent-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-primary)] disabled:border-[var(--color-border-secondary)] disabled:bg-[var(--color-bg-secondary)] disabled:checked:bg-[var(--color-bg-secondary)] forced-colors:appearance-auto"
+                  className="col-start-1 row-start-1 appearance-none rounded-sm border border-(--color-border-secondary) bg-(--color-bg-primary) checked:border-(--color-accent-primary) checked:bg-(--color-accent-primary) indeterminate:border-(--color-accent-primary) indeterminate:bg-(--color-accent-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent-primary) disabled:border-(--color-border-secondary) disabled:bg-(--color-bg-secondary) disabled:checked:bg-(--color-bg-secondary) forced-colors:appearance-auto"
                 />
                 <svg
                   fill="none"
                   viewBox="0 0 14 14"
-                  className="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white group-has-disabled/checkbox:stroke-[var(--color-text-secondary)]"
+                  className="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white group-has-disabled/checkbox:stroke-(--color-text-secondary)"
                 >
                   <path
                     d="M3 8L6 11L11 3.5"
@@ -164,7 +161,7 @@ export default function TodoItem(props: TodoItemProps) {
                 </svg>
               </div>
             </div>
-            <div className="flex-1 min-w-0 text-xs/5 text-[var(--color-text-primary)]">
+            <div className="flex-1 min-w-0 text-xs/5 text-(--color-text-primary)">
               <SmartEditor
                 apiRef={editorRef}
                 initialValue={props.todo.richText}
@@ -181,23 +178,15 @@ export default function TodoItem(props: TodoItemProps) {
     }
 
     return (
-      <div className="mt-2 relative">
+      <div className="relative">
         <div
           onClick={handleContainerClick}
           onDblClick={handleDoubleClick}
           onMouseDown={handleMouseDown}
-          onMouseUp={() => (state.isPressed = false)}
-          onMouseLeave={() => (state.isPressed = false)}
-          className={`group/todo relative flex gap-3 text-xs/5 transition-colors px-3 py-1 select-none focus:outline-none cursor-default bg-transparent ${
-            !props.isActive && !state.isPressed
-              ? "hover:bg-[var(--color-bg-hover)]"
-              : ""
-          } ${
-            state.isPressed
-              ? "!bg-[var(--color-bg-active)]"
-              : props.isActive
-              ? "!bg-[var(--color-bg-hover)]"
-              : ""
+          className={`group/todo relative flex items-center gap-3 text-xs/5 transition-colors px-3 py-2 select-none focus:outline-none cursor-default bg-transparent ${
+            props.isActive
+              ? "!bg-(--color-bg-hover)"
+              : "hover:bg-(--color-bg-hover)"
           } ${props.todo.completed ? "opacity-60" : ""}`}
         >
           <div
@@ -212,12 +201,12 @@ export default function TodoItem(props: TodoItemProps) {
                 type="checkbox"
                 checked={props.todo.completed}
                 onChange={() => props.onToggleTodoComplete(props.todo.id)}
-                className="col-start-1 row-start-1 appearance-none rounded-sm border border-[var(--color-border-secondary)] bg-[var(--color-bg-primary)] checked:border-[var(--color-accent-primary)] checked:bg-[var(--color-accent-primary)] indeterminate:border-[var(--color-accent-primary)] indeterminate:bg-[var(--color-accent-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-primary)] disabled:border-[var(--color-border-secondary)] disabled:bg-[var(--color-bg-secondary)] disabled:checked:bg-[var(--color-bg-secondary)] forced-colors:appearance-auto"
+                className="col-start-1 row-start-1 appearance-none rounded-sm border border-(--color-border-secondary) bg-(--color-bg-primary) checked:border-(--color-accent-primary) checked:bg-(--color-accent-primary) indeterminate:border-(--color-accent-primary) indeterminate:bg-(--color-accent-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent-primary) disabled:border-(--color-border-secondary) disabled:bg-(--color-bg-secondary) disabled:checked:bg-(--color-bg-secondary) forced-colors:appearance-auto"
               />
               <svg
                 fill="none"
                 viewBox="0 0 14 14"
-                className="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white group-has-disabled/checkbox:stroke-[var(--color-text-secondary)]"
+                className="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white group-has-disabled/checkbox:stroke-(--color-text-secondary)"
               >
                 <path
                   d="M3 8L6 11L11 3.5"
@@ -232,8 +221,8 @@ export default function TodoItem(props: TodoItemProps) {
           <div
             className={`flex-1 min-w-0 text-xs/5 select-none ${
               props.todo.completed
-                ? "line-through text-[var(--color-text-secondary)]"
-                : "text-[var(--color-text-primary)]"
+                ? "line-through text-(--color-text-secondary)"
+                : "text-(--color-text-primary)"
             }`}
           >
             <RichTextDisplay value={props.todo.richText} />

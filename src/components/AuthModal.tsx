@@ -5,16 +5,11 @@ export function AuthModal() {
 
   return () => (
     <div class="relative z-10">
-      {/* Backdrop */}
       <div class="fixed inset-0 bg-black/50 transition-opacity" />
-
-      {/* Modal container */}
       <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
         <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-          {/* Modal panel */}
           <div class="relative transform overflow-hidden rounded-lg bg-(--color-bg-primary) px-4 pt-5 pb-4 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6 outline -outline-offset-1 outline-(--color-outline)">
             <div>
-              {/* Icon */}
               <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-(--color-accent-light)">
                 <svg
                   class="size-6 text-(--color-accent-text)"
@@ -30,8 +25,6 @@ export function AuthModal() {
                   />
                 </svg>
               </div>
-
-              {/* Title and description */}
               <div class="mt-3 text-center sm:mt-5">
                 <h3 class="text-base font-semibold text-(--color-text-primary)">
                   Welcome to Divergent Teams
@@ -43,10 +36,7 @@ export function AuthModal() {
                 </div>
               </div>
             </div>
-
-            {/* Buttons */}
             <div class="mt-5 sm:mt-6 space-y-3">
-              {/* Google Sign In Button */}
               <button
                 type="button"
                 disabled={authentication.isAuthenticating}
@@ -55,8 +45,6 @@ export function AuthModal() {
               >
                 <span class="text-sm font-semibold">Sign in</span>
               </button>
-
-              {/* Terms of Service */}
               <p class="text-xs text-(--color-text-secondary) text-center mt-4">
                 By signing in, you agree to our{" "}
                 <a

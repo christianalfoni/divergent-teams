@@ -29,7 +29,7 @@ export function Calendar() {
 
   const state = useState({
     ...calculateWidths(),
-    isTransitioning: false,
+    isTransitioningTodoId: null as string | null,
     expandedTodo: null as any,
     addingTodoDayIndex: null as number | null,
     mentionPalette: {
@@ -95,7 +95,7 @@ export function Calendar() {
             ref={(el) => {
               columnRefs[index] = el;
             }}
-            className="flex flex-col bg-[var(--color-bg-secondary)] border-r border-[var(--color-border-primary)] last:border-r-0 overflow-hidden transition-all"
+            className="flex flex-col bg-(--color-bg-secondary) border-r border-(--color-border-primary) last:border-r-0 overflow-hidden transition-all"
             style={getColumnStyle(index)}
             onClick={() => handleDayClick()}
           >
@@ -113,8 +113,8 @@ export function Calendar() {
                   <div
                     className={`flex items-center gap-2 text-sm font-medium ${
                       index === currentDayIndex
-                        ? "text-[var(--color-accent-primary)]"
-                        : "text-[var(--color-text-secondary)]"
+                        ? "text-(--color-accent-primary)"
+                        : "text-(--color-text-secondary)"
                     }`}
                   >
                     <span>{dayNames[index]}</span>
@@ -144,7 +144,10 @@ export function Calendar() {
                           todo={todo}
                           onToggleTodoComplete={() => {}}
                           onClick={() => handleTodoClick(index, todo)}
-                          isActive={state.expandedTodo?.todoId === todo.id}
+                          isActive={
+                            state.expandedTodo?.todoId === todo.id ||
+                            state.isTransitioningTodoId === todo.id
+                          }
                         />
                       ))
                     )}
@@ -154,7 +157,7 @@ export function Calendar() {
                       state.addingTodoDayIndex !== index && (
                         <button
                           onClick={(e) => handleAddTodoClick(e, index)}
-                          className="px-3 py-2 flex items-center gap-3 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors w-full"
+                          className="px-3 py-2 flex items-center gap-3 text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors w-full"
                         >
                           <div className="flex h-5 w-4 shrink-0 items-center justify-center">
                             <svg
@@ -185,12 +188,12 @@ export function Calendar() {
                               <input
                                 disabled
                                 type="checkbox"
-                                className="col-start-1 row-start-1 appearance-none rounded-sm border border-[var(--color-border-secondary)] bg-[var(--color-bg-primary)] disabled:border-[var(--color-border-secondary)] disabled:bg-[var(--color-bg-secondary)]"
+                                className="col-start-1 row-start-1 appearance-none rounded-sm border border-(--color-border-secondary) bg-(--color-bg-primary) disabled:border-(--color-border-secondary) disabled:bg-(--color-bg-secondary)"
                               />
                               <svg
                                 fill="none"
                                 viewBox="0 0 14 14"
-                                className="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-[var(--color-text-inverse)] group-has-disabled/checkbox:stroke-[var(--color-text-secondary)]"
+                                className="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-(--color-text-inverse) group-has-disabled/checkbox:stroke-(--color-text-secondary)"
                               >
                                 <path
                                   d="M3 8L6 11L11 3.5"
@@ -203,7 +206,7 @@ export function Calendar() {
                             </div>
                           </div>
                           <div
-                            className="flex-1 min-w-0 text-[var(--color-text-primary)]"
+                            className="flex-1 min-w-0 text-(--color-text-primary)"
                             style={{ "font-size": "var(--todo-text-size)" }}
                           >
                             <SmartEditor
@@ -243,9 +246,9 @@ export function Calendar() {
               </div>
 
               {/* Chat interface - shows when chat state exists */}
-              {state.expandedTodo && (
+              {
                 <div
-                  className="flex-shrink-0 flex flex-col bg-[var(--color-bg-hover)] h-full"
+                  className="flex-shrink-0 flex flex-col bg-(--color-bg-hover) h-full"
                   style={{
                     width: state.chatWidth ? `${state.chatWidth}px` : "400px",
                   }}
@@ -260,11 +263,11 @@ export function Calendar() {
                     <input
                       type="text"
                       placeholder={`Message...`}
-                      className="w-full px-3 py-2 text-xs border border-[var(--color-border-secondary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)] placeholder:text-[var(--color-text-secondary)]"
+                      className="w-full px-3 py-2 text-xs border border-(--color-border-secondary) bg-(--color-bg-primary) text-(--color-text-primary) rounded-md focus:outline-none focus:ring-2 focus:ring-(--color-accent-primary) placeholder:text-(--color-text-secondary)"
                     />
                   </div>
                 </div>
-              )}
+              }
             </div>
           </div>
         ))}
@@ -276,21 +279,21 @@ export function Calendar() {
   function handleTodoClick(dayIndex: number, todo: any) {
     // If clicking the same todo, collapse it but keep chat state
     if (state.expandedTodo?.todoId === todo.id) {
-      state.isTransitioning = true;
+      state.isTransitioningTodoId = todo.id;
       state.expandedTodo = null;
 
       setTimeout(() => {
-        state.isTransitioning = false;
+        state.isTransitioningTodoId = null;
       }, 350);
       return;
     }
 
     // Expand the clicked todo and set up chat state
-    state.isTransitioning = true;
+    state.isTransitioningTodoId = todo.id;
     state.expandedTodo = { dayIndex, todoId: todo.id, todo };
 
     setTimeout(() => {
-      state.isTransitioning = false;
+      state.isTransitioningTodoId = null;
     }, 350);
   }
 
