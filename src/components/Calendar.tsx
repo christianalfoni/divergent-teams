@@ -233,7 +233,12 @@ export function Calendar() {
               </div>
 
               {/* Chat interface - shows when chat state exists */}
-              <TodoConversation width={state.chatWidth} />
+              {state.expandedTodo?.todo ? (
+                <TodoConversation
+                  width={state.chatWidth}
+                  todo={state.expandedTodo.todo}
+                />
+              ) : null}
             </div>
           </div>
         ))}

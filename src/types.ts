@@ -1,5 +1,5 @@
 import type { Timestamp } from "firebase/firestore";
-import type { RichText } from "./components/SmartEditor";
+import type { Resource, RichText } from "./components/SmartEditor";
 
 export type Mention = {
   id: string;
@@ -12,17 +12,24 @@ export type Mention = {
 
 export interface Conversation {
   id: string;
+  createdAt: Timestamp;
+  participantUserIds: string[];
+}
+
+export interface Message {
+  id: string;
+  userId: string;
+  richText: {
+    text: string;
+    resources: Resource[];
+  };
+  createdAt: Timestamp;
 }
 
 export interface Issue {
   id: string;
   title: string;
   description: string;
-}
-
-export interface Message {
-  id: string;
-  content: string;
 }
 
 export interface Organization {
@@ -56,4 +63,5 @@ export interface Todo {
   moveCount?: number; // Number of times todo has been moved/rescheduled
   completedAt?: Timestamp; // When the todo was marked complete
   completedWithTimeBox?: boolean; // Whether completed during a time-boxed session
+  conversationId?: string;
 }

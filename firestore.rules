@@ -56,5 +56,62 @@ service cloud.firestore {
       // Allow update/delete if user is org member and owns the todo
       allow update, delete: if isOrgMember() && isOwner();
     }
+
+    // Rules for conversations within an organization
+    match /organizations/{organizationId}/conversations/{conversationId} {
+
+      // Helper function to check if user belongs to the organization
+      function isOrgMember() {
+        return request.auth != null
+          && request.auth.token.organizationId == organizationId;
+      }
+
+      // Helper function to check if user is a participant (for existing docs)
+      function isParticipant() {
+        return request.auth.uid in resource.data.participantUserIds;
+      }
+
+      // Helper function to check if user is a participant (for new/updated docs)
+      function isParticipantInRequest() {
+        return request.auth.uid in request.resource.data.participantUserIds;
+      }
+
+      // Allow read if user is org member and is a participant
+      allow read: if isOrgMember() && isParticipant();
+
+      // Allow create if user is org member and is included as a participant
+      allow create: if isOrgMember() && isParticipantInRequest();
+
+      // Allow update/delete if user is org member and is a participant
+      allow update, delete: if isOrgMember() && isParticipant();
+
+      // Rules for messages within a conversation
+      match /messages/{messageId} {
+
+        // Helper function to check if user belongs to the organization
+        function isOrgMember() {
+          return request.auth != null
+            && request.auth.token.organizationId == organizationId;
+        }
+
+        // Helper function to check if user is a participant in the parent conversation
+        function isConversationParticipant() {
+          return request.auth.uid in get(/databases/$(database)/documents/organizations/$(organizationId)/conversations/$(conversationId)).data.participantUserIds;
+        }
+
+        // Helper function to check if user is creating their own message
+        function isCreatingOwnMessage() {
+          return request.resource.data.userId == request.auth.uid;
+        }
+
+        // Allow read if user is org member and is a participant in the conversation
+        allow read: if isOrgMember() && isConversationParticipant();
+
+        // Allow create if user is org member, is a participant, and is creating their own message
+        allow create: if isOrgMember() && isConversationParticipant() && isCreatingOwnMessage();
+
+        // Messages are immutable - no updates or deletes allowed
+      }
+    }
   }
 }
