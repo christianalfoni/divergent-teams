@@ -12,6 +12,7 @@ export type Mention = {
 
 export interface Conversation {
   id: string;
+  reference: { type: "todo"; id: string };
   createdAt: Timestamp;
   participantUserIds: string[];
 }
@@ -56,6 +57,7 @@ export interface Todo {
   userId: string;
   richText: RichText;
   completed: boolean;
+  isGenerated: boolean;
   date: Timestamp;
   position: string; // Fractional index for ordering
   createdAt: Timestamp;

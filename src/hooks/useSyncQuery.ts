@@ -34,7 +34,7 @@ export function useSyncQuery<T extends { id: string }>(
         state.isLoading = false;
         snapshot.docChanges().forEach((docChange) => {
           const data = docChange.doc.data() as T;
-          const item = state.data.find((item) => item.id === data.id);
+          const item = state.data.find((item) => item.id === docChange.doc.id);
 
           // Since we support optimistic data, an added can cause the item to already be there, where
           // we rather apply updates

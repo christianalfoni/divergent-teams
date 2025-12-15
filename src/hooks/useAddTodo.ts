@@ -23,6 +23,7 @@ export function useAddTodo() {
       const todo: Todo = {
         id: newTodoDoc.id,
         completed: false,
+        isGenerated: false,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         date: Timestamp.fromDate(params.date),
@@ -33,8 +34,10 @@ export function useAddTodo() {
 
       data.todos.push(todo);
 
+      const { id: _, ...todoData } = todo;
+
       await setDoc(newTodoDoc, {
-        ...todo,
+        ...todoData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });

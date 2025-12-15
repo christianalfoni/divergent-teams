@@ -48,12 +48,13 @@ export function useTodoConversation(todo: Todo) {
           createdAt: Timestamp.now(),
           participantUserIds: [authentication.user.id],
         };
+        const { id: _, ...conversationData } = conversation;
         todo.conversationId = conversation.id;
         createConversation = () =>
           Promise.all([
             setDoc(conversationDoc, {
+              ...conversationData,
               createdAt: serverTimestamp(),
-              participantUserIds: conversation.participantUserIds,
             }),
             updateDoc(todoDoc, {
               conversationId: conversation.id,

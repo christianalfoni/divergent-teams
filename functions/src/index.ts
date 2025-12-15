@@ -13,3 +13,4 @@ admin.initializeApp();
 
 export { createBeforeSignIn } from "./authentication";
 export { onUserUpdate } from "./mentions";
+export { onConversationChange } from "./conversations-trigger";
