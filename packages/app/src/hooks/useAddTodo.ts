@@ -23,7 +23,7 @@ export function useAddTodo() {
       const todo: Todo = {
         id: newTodoDoc.id,
         completed: false,
-        isGenerated: false,
+        isAccepted: true,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         date: Timestamp.fromDate(params.date),

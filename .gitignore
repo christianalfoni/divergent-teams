@@ -3,3 +3,6 @@ node_modules
 .swc
 .vscode
 *.log
+dist
+lib
+.firebase-pnpm-workspaces

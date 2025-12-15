@@ -14,7 +14,12 @@
         "*.local"
       ],
       "predeploy": [
+        "pnpm --filter @divergent-teams/shared run build",
+        "node packages/functions/prepare-workspace.js",
         "pnpm --filter @divergent-teams/functions run build"
+      ],
+      "postdeploy": [
+        "node packages/functions/cleanup-workspace.js"
       ]
     }
   ]

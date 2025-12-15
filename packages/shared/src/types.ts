@@ -1,5 +1,5 @@
 import type { Timestamp } from "firebase/firestore";
-import type { Resource, RichText } from "./editor-types";
+import type { Resource, RichText } from "./editor-types.js";
 
 export type Mention = {
   id: string;
@@ -57,7 +57,7 @@ export interface Todo {
   userId: string;
   richText: RichText;
   completed: boolean;
-  isGenerated: boolean;
+  isAccepted: boolean;
   date: Timestamp;
   position: string; // Fractional index for ordering
   createdAt: Timestamp;
