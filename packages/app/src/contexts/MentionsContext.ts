@@ -1,5 +1,5 @@
 import { createContext, useState, useView } from "rask-ui";
-import type { Mention } from "../types";
+import type { Mention } from "@divergent-teams/shared";
 
 export type OnSelectMention = (mention: Mention | null) => void;
 

@@ -1,13 +1,13 @@
 import { useEffect, useState, useRef, useDerived } from "rask-ui";
 import TodoItem from "./TodoItem";
 import { getCurrentDayIndex, getWeekdays, isSameDay } from "../utils/calendar";
-import { SmartEditor, type SmartEditorApi, type Resource } from "./SmartEditor";
+import { SmartEditor, type SmartEditorApi } from "./SmartEditor";
 import { MentionPalette } from "./MentionPalette";
 import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import { TodosLoadingPlaceholder } from "./TodosLoadingPlaceholder";
 import { useAddTodo } from "../hooks/useAddTodo";
 import { DataContext } from "../contexts/DataContext";
-import type { Mention } from "../types";
+import type { Mention } from "@divergent-teams/shared";
 import { TodoConversation } from "./TodoConversation";
 import { MentionsContext } from "../contexts/MentionsContext";
 

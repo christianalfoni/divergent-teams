@@ -5,7 +5,7 @@ import {
   type SmartEditorApi,
   type RichText,
 } from "./SmartEditor";
-import type { Todo } from "../types";
+import type { Todo } from "@divergent-teams/shared";
 
 interface TodoItemProps {
   todo: Todo;

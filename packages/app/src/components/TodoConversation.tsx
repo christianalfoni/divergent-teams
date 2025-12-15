@@ -7,7 +7,7 @@ import {
 } from "./SmartEditor";
 import { useTodoConversation } from "../hooks/useTodoConversation";
 import { AuthenticationContext } from "../contexts/AuthenticationContext";
-import type { Todo } from "../types";
+import type { Todo } from "@divergent-teams/shared";
 
 type Props = {
   width: number;
@@ -73,6 +73,10 @@ export function TodoConversation(props: Props) {
             apiRef={editorRef}
             placeholder="Type a message..."
             onSubmit={(richText) => {
+              if (!richText.text) {
+                return;
+              }
+
               conversation.submitMessage(richText);
               editorRef.current?.clear();
             }}

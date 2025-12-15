@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "rask-ui";
-import type { Mention } from "../types";
+import type { Mention } from "@divergent-teams/shared";
 import { DataContext } from "../contexts/DataContext";
 
 type Props = {

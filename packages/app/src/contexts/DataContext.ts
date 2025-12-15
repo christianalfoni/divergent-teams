@@ -1,6 +1,6 @@
 import { createContext, useAsync, useDerived, useEffect } from "rask-ui";
 import { FirebaseContext } from "./FirebaseContext";
-import type { Mention, Todo } from "../types";
+import type { Mention, Todo } from "@divergent-teams/shared";
 import { AuthenticationContext } from "./AuthenticationContext";
 import { useSyncQuery } from "../hooks/useSyncQuery";
 import { query, where } from "firebase/firestore";

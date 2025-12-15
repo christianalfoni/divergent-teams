@@ -89,9 +89,27 @@ return () => (
 
 ## Project Structure
 
-- **src/components/** - Rask UI components
-- **src/contexts/** - Reactive context providers
-- **src/App.tsx** - Main application component
+This is a **pnpm workspace monorepo** with the following structure:
+
+- **packages/app/** - Main Vite application (Rask UI)
+  - `src/components/` - Rask UI components
+  - `src/contexts/` - Reactive context providers
+  - `src/App.tsx` - Main application component
+- **packages/functions/** - Firebase Cloud Functions
+  - `src/` - Function implementations
+- **packages/shared/** - Shared types and utilities
+  - Used by both app and functions
+  - Import with `@divergent-teams/shared`
+
+### Working with Shared Code
+
+To share types or utilities between the app and functions:
+
+1. Add them to `packages/shared/src/`
+2. Export from `packages/shared/src/index.ts`
+3. Import in app or functions: `import { Type } from '@divergent-teams/shared'`
+
+No build step required for simple types and utilities!
 
 ## Common Pitfalls
 

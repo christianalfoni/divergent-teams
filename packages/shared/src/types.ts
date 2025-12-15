@@ -1,5 +1,5 @@
 import type { Timestamp } from "firebase/firestore";
-import type { Resource, RichText } from "./components/SmartEditor";
+import type { Resource, RichText } from "./editor-types";
 
 export type Mention = {
   id: string;

@@ -1,6 +1,6 @@
 import { useAction, useView } from "rask-ui";
 import { FirebaseContext } from "../contexts/FirebaseContext";
-import type { Todo } from "../types";
+import type { Todo } from "@divergent-teams/shared";
 import { doc, serverTimestamp, setDoc, Timestamp } from "firebase/firestore";
 import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import { DataContext } from "../contexts/DataContext";

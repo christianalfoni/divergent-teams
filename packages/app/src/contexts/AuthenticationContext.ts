@@ -14,7 +14,7 @@ import {
   type User as FirebaseUser,
 } from "firebase/auth";
 import { collection, doc, getDoc } from "firebase/firestore";
-import type { User } from "../types";
+import type { User } from "@divergent-teams/shared";
 
 type AuthenticationState =
   | {

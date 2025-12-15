@@ -1,19 +1,9 @@
 import { assignRef, useMountEffect, useRef, type Ref } from "rask-ui";
-import type { Mention } from "../types";
+import type { Mention } from "@divergent-teams/shared";
+import type { Resource, RichText } from "@divergent-teams/shared";
 
-// Entity types
-export type Resource =
-  | { type: "tag"; tag: string }
-  | { type: "user"; userId: string; display: string }
-  | { type: "project"; projectId: string; display: string }
-  | { type: "issue"; issueId: string; display: string }
-  | { type: "link"; url: string; display: string };
-
-// Rich text structure
-export type RichText = {
-  text: string; // Contains [[0]], [[1]], etc.
-  resources: Resource[];
-};
+// Re-export for backwards compatibility
+export type { Resource, RichText };
 
 type SmartEditorProps = {
   initialValue?: RichText;

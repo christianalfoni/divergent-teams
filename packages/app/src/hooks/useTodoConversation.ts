@@ -2,7 +2,7 @@ import { useAction, useState } from "rask-ui";
 import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import { FirebaseContext } from "../contexts/FirebaseContext";
 import { useSyncQuery } from "./useSyncQuery";
-import type { Conversation, Message, Todo } from "../types";
+import type { Conversation, Message, Todo } from "@divergent-teams/shared";
 import type { RichText } from "../components/SmartEditor";
 import {
   doc,
