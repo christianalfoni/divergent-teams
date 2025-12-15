@@ -17,17 +17,14 @@ export type RichText = {
 
 type SmartEditorProps = {
   initialValue?: RichText;
-  apiRef?: Ref<SmartEditorRef>;
+  apiRef?: Ref<SmartEditorApi>;
   onSubmit?: (value: RichText) => void;
   placeholder?: string;
   focus?: boolean;
   onKeyDown?: (e: Rask.KeyboardEvent<HTMLDivElement>) => void;
   onBlur?: () => void;
   availableTags?: string[]; // List of all tag texts from other todos for autocomplete
-  onMention?: (
-    query: string,
-    insertMention: (mention: Mention) => void
-  ) => void;
+  onMention?: (smartEditorApi: SmartEditorApi) => void;
 };
 
 type RichTextDisplayProps = {
@@ -37,11 +34,12 @@ type RichTextDisplayProps = {
   onIssueClick?: (issueId: string) => void;
 };
 
-export type SmartEditorRef = {
+export type SmartEditorApi = {
   clear: () => void;
   setValue: (value: RichText) => void;
   getValue: () => RichText;
   cancelMention: () => void;
+  insertMention: (mention: Mention) => void;
 };
 
 const URL_REGEX = /^(https?:\/\/)?([\w.-]+)(:\d+)?(\/[^\s]*)?$/i;
@@ -224,28 +222,62 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
 export function SmartEditor(props: SmartEditorProps) {
   const ref = useRef<HTMLDivElement>();
   let isInitialMount = true;
-  let isMentioning = false; // Track if we're in mention mode to prevent premature submit
+  let mentioningRange = null as Range | null; // Track if we're in mention mode to prevent premature submit
+
+  const api = {
+    clear: () => {
+      if (ref.current) {
+        ref.current.innerHTML = "";
+      }
+    },
+    focus() {
+      ref.current?.focus();
+    },
+    setValue: (value: RichText) => {
+      if (ref.current) {
+        ref.current.innerHTML = richTextToHtml(value);
+      }
+    },
+    getValue: () => {
+      return htmlToRichText(ref.current?.innerHTML || "");
+    },
+    cancelMention: () => {
+      mentioningRange = null;
+    },
+    // Create the insertMention callback
+    insertMention: (mention: Mention) => {
+      if (!mentioningRange) {
+        throw new Error("No reference to a mentioning range");
+      }
+      // Remove the @query text
+      mentioningRange.deleteContents();
+
+      // Create and insert the mention span
+      const mentionSpan = makeMentionSpan(mention);
+      mentioningRange.insertNode(mentionSpan);
+
+      // Add a space after the mention
+      const space = document.createTextNode(" ");
+      mentioningRange.setStartAfter(mentionSpan);
+      mentioningRange.insertNode(space);
+
+      // Move cursor after the space
+      mentioningRange.setStartAfter(space);
+      mentioningRange.collapse(true);
+      const sel = document.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(mentioningRange);
+
+      ref.current?.focus();
+
+      // Re-enable submit after mention is inserted
+      mentioningRange = null;
+    },
+  };
 
   if (props.apiRef) {
     // Expose imperative methods
-    assignRef(props.apiRef, {
-      clear: () => {
-        if (ref.current) {
-          ref.current.innerHTML = "";
-        }
-      },
-      setValue: (value: RichText) => {
-        if (ref.current) {
-          ref.current.innerHTML = richTextToHtml(value);
-        }
-      },
-      getValue: () => {
-        return htmlToRichText(ref.current?.innerHTML || "");
-      },
-      cancelMention: () => {
-        isMentioning = false;
-      },
-    });
+    assignRef(props.apiRef, api);
   }
 
   // Initialize content only once
@@ -277,7 +309,7 @@ export function SmartEditor(props: SmartEditorProps) {
 
   // Notify changes (serialize innerHTML to RichText)
   const emitChange = () => {
-    if (!props.onSubmit || !ref.current || isMentioning) return;
+    if (!props.onSubmit || !ref.current || mentioningRange) return;
     const richText = htmlToRichText(ref.current.innerHTML);
     props.onSubmit(richText);
   };
@@ -297,39 +329,13 @@ export function SmartEditor(props: SmartEditorProps) {
 
     // Check if the word starts with @
     if (wordInfo.word.startsWith("@")) {
-      const query = wordInfo.word.slice(1); // Remove the @
       const { range } = wordInfo;
 
       // Disable submit while in mention mode
-      isMentioning = true;
-
-      // Create the insertMention callback
-      const insertMention = (mention: Mention) => {
-        // Remove the @query text
-        range.deleteContents();
-
-        // Create and insert the mention span
-        const mentionSpan = makeMentionSpan(mention);
-        range.insertNode(mentionSpan);
-
-        // Add a space after the mention
-        const space = document.createTextNode(" ");
-        range.setStartAfter(mentionSpan);
-        range.insertNode(space);
-
-        // Move cursor after the space
-        range.setStartAfter(space);
-        range.collapse(true);
-        const sel = document.getSelection();
-        sel?.removeAllRanges();
-        sel?.addRange(range);
-
-        // Re-enable submit after mention is inserted
-        isMentioning = false;
-      };
+      mentioningRange = range;
 
       // Call the onMention callback with query and insertMention
-      props.onMention(query, insertMention);
+      props.onMention(api);
     }
   }
 
@@ -688,10 +694,11 @@ export function SmartEditor(props: SmartEditorProps) {
     }
   };
 
-  const handleBlur = () => {
+  const handleBlur = (e: Rask.FocusEvent) => {
     // Don't trigger blur handler if the entire window/document lost focus
     // (user switched to another app). Only blur when clicking within the app.
-    if (!document.hasFocus()) {
+    if (mentioningRange || !document.hasFocus()) {
+      e.preventDefault();
       return;
     }
 

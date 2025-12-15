@@ -6,7 +6,6 @@
 
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
-import { serverTimestamp } from "firebase/firestore";
 
 const db = admin.firestore();
 
@@ -50,7 +49,7 @@ export const onUserUpdate = onDocumentWritten(
         type: "user",
         userId: userId,
         displayName: newData?.displayName || null,
-        updatedAt: serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true }
     );

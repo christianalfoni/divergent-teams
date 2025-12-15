@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "rask-ui";
 import {
   RichTextDisplay,
   SmartEditor,
-  type SmartEditorRef,
+  type SmartEditorApi,
   type RichText,
 } from "./SmartEditor";
 import type { Todo } from "../types";
@@ -27,7 +27,7 @@ export default function TodoItem(props: TodoItemProps) {
     isEditing: false,
   });
   const containerRef = useRef<HTMLDivElement>();
-  const editorRef = useRef<SmartEditorRef>();
+  const editorRef = useRef<SmartEditorApi>();
 
   let originalRichTextRef = props.todo.richText;
   let lastClickTimeRef = 0;

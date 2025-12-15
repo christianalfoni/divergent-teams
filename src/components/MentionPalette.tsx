@@ -5,8 +5,7 @@ import { DataContext } from "../contexts/DataContext";
 type Props = {
   open: boolean;
   query: string;
-  onSelect: (mention: Mention) => void;
-  onClose: () => void;
+  onSelect: ((mention: Mention | null) => void) | null;
 };
 
 export function MentionPalette(props: Props) {
@@ -46,8 +45,7 @@ export function MentionPalette(props: Props) {
   state.activeItem = filteredItems[state.selectedIndex] || null;
 
   const handleSelect = (item: Mention) => {
-    props.onSelect(item);
-    props.onClose();
+    props.onSelect?.(item);
   };
 
   const handleInputKeyDown = (e: Rask.KeyboardEvent) => {
@@ -67,7 +65,7 @@ export function MentionPalette(props: Props) {
       }
     } else if (e.key === "Escape") {
       e.preventDefault();
-      props.onClose();
+      props.onSelect?.(null);
     }
   };
 
@@ -85,7 +83,7 @@ export function MentionPalette(props: Props) {
         {/* Backdrop */}
         <div
           className="fixed inset-0 bg-gray-500/25 dark:bg-gray-900/50 z-50 transition-opacity"
-          onClick={props.onClose}
+          onClick={() => props.onSelect?.(null)}
         />
 
         {/* Palette */}

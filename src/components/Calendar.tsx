@@ -1,24 +1,27 @@
 import { useEffect, useState, useRef, useDerived } from "rask-ui";
 import TodoItem from "./TodoItem";
 import { getCurrentDayIndex, getWeekdays, isSameDay } from "../utils/calendar";
-import { SmartEditor, type SmartEditorRef, type Resource } from "./SmartEditor";
+import { SmartEditor, type SmartEditorApi, type Resource } from "./SmartEditor";
 import { MentionPalette } from "./MentionPalette";
 import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import { TodosLoadingPlaceholder } from "./TodosLoadingPlaceholder";
 import { useAddTodo } from "../hooks/useAddTodo";
 import { DataContext } from "../contexts/DataContext";
 import type { Mention } from "../types";
+import { TodoConversation } from "./TodoConversation";
+import { MentionsContext } from "../contexts/MentionsContext";
 
 // Collapsed column width
 const COLLAPSED_WIDTH = 100;
 
 export function Calendar() {
   const authentication = AuthenticationContext.use();
+  const mentions = MentionsContext.use();
   const data = DataContext.use();
   const weekdays = getWeekdays();
   const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri"];
   const columnRefs = [] as any[];
-  const editorRefs = weekdays.map(() => useRef<SmartEditorRef>());
+  const editorRefs = weekdays.map(() => useRef<SmartEditorApi>());
   const currentDayIndex = getCurrentDayIndex();
   const addTodo = useAddTodo();
   const derived = useDerived({
@@ -59,34 +62,9 @@ export function Calendar() {
     <div className="flex-1 w-full flex flex-col overflow-hidden">
       {/* Mention Palette */}
       <MentionPalette
-        open={state.mentionPalette.open}
-        query={state.mentionPalette.query}
-        onSelect={(entity) => {
-          if (state.mentionPalette.insertMention) {
-            state.mentionPalette.insertMention(entity);
-          }
-          state.mentionPalette.open = false;
-          state.mentionPalette.insertMention = null;
-
-          // Refocus the editor
-          if (state.addingTodoDayIndex !== null) {
-            setTimeout(() => {
-              const editor = editorRefs[state.addingTodoDayIndex!].current;
-              if (editor) {
-                const el = (editor as any).ref?.current;
-                if (el) el.focus();
-              }
-            }, 0);
-          }
-        }}
-        onClose={() => {
-          // Re-enable submit if user cancelled the mention
-          if (state.addingTodoDayIndex !== null) {
-            editorRefs[state.addingTodoDayIndex].current?.cancelMention();
-          }
-          state.mentionPalette.open = false;
-          state.mentionPalette.insertMention = null;
-        }}
+        open={mentions.isOpen}
+        query=""
+        onSelect={mentions.onSelect}
       />
 
       <div className="flex flex-1 min-h-0">
@@ -231,11 +209,19 @@ export function Calendar() {
                               onKeyDown={(e) => handleEditorKeyDown(e, index)}
                               onBlur={() => handleEditorBlur(index)}
                               availableTags={[]}
-                              onMention={(query, insertMention) => {
-                                state.mentionPalette.open = true;
-                                state.mentionPalette.query = query;
-                                state.mentionPalette.insertMention =
-                                  insertMention;
+                              onMention={(api) => {
+                                mentions.open((mention) => {
+                                  if (state.addingTodoDayIndex !== index) {
+                                    return;
+                                  }
+
+                                  if (!mention) {
+                                    api.cancelMention();
+                                    return;
+                                  }
+
+                                  api.insertMention(mention);
+                                });
                               }}
                             />
                           </div>
@@ -247,28 +233,7 @@ export function Calendar() {
               </div>
 
               {/* Chat interface - shows when chat state exists */}
-              {
-                <div
-                  className="flex-shrink-0 flex flex-col bg-(--color-bg-hover) h-full"
-                  style={{
-                    width: state.chatWidth ? `${state.chatWidth}px` : "400px",
-                  }}
-                >
-                  {/* Messages container */}
-                  <div className="flex-1 overflow-y-auto p-3">
-                    {/* Messages will go here */}
-                  </div>
-
-                  {/* Message input - at bottom */}
-                  <div className="p-3 pt-0">
-                    <input
-                      type="text"
-                      placeholder={`Message...`}
-                      className="w-full px-3 py-2 text-xs border border-(--color-border-secondary) bg-(--color-bg-primary) text-(--color-text-primary) rounded-md focus:outline-none focus:ring-2 focus:ring-(--color-accent-primary) placeholder:text-(--color-text-secondary)"
-                    />
-                  </div>
-                </div>
-              }
+              <TodoConversation width={state.chatWidth} />
             </div>
           </div>
         ))}
