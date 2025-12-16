@@ -44,7 +44,10 @@ export function useSyncQuery<T extends { id: string }>(
               if (item) {
                 assignState(item, data);
               } else {
-                state.data.push(data);
+                state.data.push({
+                  ...data,
+                  id: docChange.doc.id,
+                });
               }
               break;
             }

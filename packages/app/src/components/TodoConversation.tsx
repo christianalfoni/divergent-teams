@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "rask-ui";
+import { useRef, useMountEffect } from "rask-ui";
 import { MentionsContext } from "../contexts/MentionsContext";
 import {
   SmartEditor,
@@ -23,11 +23,14 @@ export function TodoConversation(props: Props) {
   const messages = conversation.messages.data;
 
   // Auto-scroll to bottom when messages change
-  useEffect(() => {
+  useMountEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop =
         messagesContainerRef.current.scrollHeight;
     }
+    setTimeout(() => {
+      editorRef.current?.focus();
+    }, 350);
   });
 
   return () => (

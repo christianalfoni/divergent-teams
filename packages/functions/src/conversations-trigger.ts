@@ -11,7 +11,9 @@ import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
 
 // Define the RichText Zod schema
-const ResourceSchema = z.discriminatedUnion("type", [
+// Note: Using z.union() instead of z.discriminatedUnion() because OpenAI's
+// structured outputs support anyOf (from union) but not oneOf (from discriminatedUnion)
+const ResourceSchema = z.union([
   z.object({
     type: z.literal("tag"),
     tag: z.string(),
@@ -125,32 +127,84 @@ export const onConversationChange = onDocumentWritten(
 
           // Build the prompt for OpenAI
           const originalRichText = todoData.richText;
-          const prompt = `You are helping to create a personalized todo item for a user named "${
-            participantUser.displayName
-          }" (ID: ${userId}).
+          const prompt = `You are generating a todo item for a user based on what another user needs from them.
 
-The original todo was created by "${
-            ownerUserData.displayName
-          }" and contains the following:
+## Context
 
+**Original Todo Creator:**
+- User ID: ${ownerUserId}
+- Display Name: "${ownerUserData.displayName}"
+
+**Original Todo (what ${ownerUserData.displayName} needs to do):**
 Text: ${originalRichText.text}
 Resources: ${JSON.stringify(originalRichText.resources, null, 2)}
 
-The RichText format uses placeholders like [[0]], [[1]], etc. in the text field, which correspond to resources in the resources array by index.
+**Target User (who needs the new todo):**
+- User ID: ${userId}
+- Display Name: "${participantUser.displayName}"
 
-Your task:
-1. Analyze the original todo and identify if the user "${
-            participantUser.displayName
-          }" (ID: ${userId}) is mentioned
-2. Rewrite the todo from the perspective of "${
-            participantUser.displayName
-          }", describing what THEY need to do
-3. Keep any relevant mentions, links, or tags from the original
-4. Return a valid RichText object with the same format (text with placeholders [[0]], [[1]], etc., and a resources array)
+## RichText Format
 
-Generate a new RichText object that describes the original intention but from "${
-            participantUser.displayName
-          }"'s perspective.`;
+The RichText format uses:
+- Placeholders like [[0]], [[1]], etc. in the text field
+- These placeholders reference resources by their index in the resources array
+- Resources can be tags, user mentions, projects, issues, or links
+
+## Your Task
+
+Generate a new RichText object for "${participantUser.displayName}" that ALWAYS follows this pattern:
+
+**ALWAYS start with [[0]] referencing the original creator**, followed by what they need/want:
+- "[[0]] would like to..."
+- "[[0]] needs..."
+- "[[0]] wants to..."
+- "[[0]] is asking to..."
+
+Where [[0]] is a user mention resource:
+\`\`\`json
+{
+  "type": "user",
+  "userId": "${ownerUserId}",
+  "display": "${ownerUserData.displayName}"
+}
+\`\`\`
+
+**Rules:**
+1. ALWAYS put the original creator as [[0]] in the resources array
+2. Start the text with "[[0]] would like to..." or similar pattern
+3. Describe what the original creator wants/needs based on their original todo
+4. If the original todo mentions the target user "${participantUser.displayName}" (ID: ${userId}), replace that mention with "you" or "your" - DO NOT include them as a resource
+5. Keep any other relevant resources from the original (tags, projects, links, etc.) but shift their indices
+6. Stay literal to the original todo - don't add extra context
+
+## Examples
+
+Original: "Review [[0]]'s PR for [[1]]" (where [[0]] is the target user)
+Generated: "[[0]] would like to review your PR for [[1]]"
+- Resources: [creator user mention, project from original]
+- Note: Target user mention replaced with "your"
+
+Original: "Schedule meeting with [[0]] about [[1]]" (where [[0]] is the target user)
+Generated: "[[0]] needs to schedule a meeting with you about [[1]]"
+- Resources: [creator user mention, tag from original]
+- Note: Target user mention replaced with "you"
+
+Original: "Send proposal to [[0]]" (where [[0]] is the target user)
+Generated: "[[0]] is asking you to review their proposal"
+- Resources: [creator user mention only]
+- Note: Target user mention replaced with "you"
+
+Original: "Review [[0]]'s code" (where [[0]] is the target user)
+Generated: "[[0]] would like to review your code"
+- Resources: [creator user mention only]
+- Note: Target user mention replaced with "your"
+
+Original: "Discuss [[0]] with [[1]]" (where [[1]] is the target user)
+Generated: "[[0]] wants to discuss [[1]] with you"
+- Resources: [creator user mention, project from original]
+- Note: Target user mention replaced with "you"
+
+Generate the RichText object now:`;
 
           // Call OpenAI with structured output using Zod schema
           const completion = await openai.chat.completions.parse({

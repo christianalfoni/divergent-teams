@@ -7,7 +7,7 @@ import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import { TodosLoadingPlaceholder } from "./TodosLoadingPlaceholder";
 import { useAddTodo } from "../hooks/useAddTodo";
 import { DataContext } from "../contexts/DataContext";
-import type { Mention } from "@divergent-teams/shared";
+import type { Mention, Todo } from "@divergent-teams/shared";
 import { TodoConversation } from "./TodoConversation";
 import { MentionsContext } from "../contexts/MentionsContext";
 
@@ -33,8 +33,12 @@ export function Calendar() {
 
   const state = useState({
     ...calculateWidths(),
-    isTransitioningTodoId: null as string | null,
-    expandedTodo: null as any,
+    showConversationDayIndex: null as number | null,
+    selectedTodo: null as {
+      dayIndex: number;
+      todoId: string;
+      todo: Todo;
+    } | null,
     addingTodoDayIndex: null as number | null,
     mentionPalette: {
       open: false,
@@ -56,7 +60,8 @@ export function Calendar() {
   });
 
   // Helper to check if a day is expanded
-  const isExpanded = (index: number) => state.expandedTodo?.dayIndex === index;
+  const isExpanded = (index: number) =>
+    state.showConversationDayIndex === index;
 
   return () => (
     <div className="flex-1 w-full flex flex-col overflow-hidden">
@@ -105,7 +110,8 @@ export function Calendar() {
                 <div className="flex-1 overflow-y-auto">
                   <div
                     className={
-                      state.expandedTodo && !isExpanded(index)
+                      state.showConversationDayIndex !== null &&
+                      !isExpanded(index)
                         ? "opacity-0"
                         : "opacity-100"
                     }
@@ -123,10 +129,7 @@ export function Calendar() {
                           todo={todo}
                           onToggleTodoComplete={() => {}}
                           onClick={() => handleTodoClick(index, todo)}
-                          isActive={
-                            state.expandedTodo?.todoId === todo.id ||
-                            state.isTransitioningTodoId === todo.id
-                          }
+                          isActive={state.selectedTodo?.todoId === todo.id}
                         />
                       ))
                     )}
@@ -233,10 +236,11 @@ export function Calendar() {
               </div>
 
               {/* Chat interface - shows when chat state exists */}
-              {state.expandedTodo?.todo ? (
+              {state.selectedTodo?.dayIndex === index ? (
                 <TodoConversation
+                  key={state.selectedTodo.todoId}
                   width={state.chatWidth}
-                  todo={state.expandedTodo.todo}
+                  todo={state.selectedTodo.todo}
                 />
               ) : null}
             </div>
@@ -249,28 +253,22 @@ export function Calendar() {
   // Handle todo click
   function handleTodoClick(dayIndex: number, todo: any) {
     // If clicking the same todo, collapse it but keep chat state
-    if (state.expandedTodo?.todoId === todo.id) {
-      state.isTransitioningTodoId = todo.id;
-      state.expandedTodo = null;
-
+    if (state.selectedTodo?.todoId === todo.id) {
+      state.showConversationDayIndex = null;
       setTimeout(() => {
-        state.isTransitioningTodoId = null;
+        state.selectedTodo = null;
       }, 350);
       return;
     }
 
     // Expand the clicked todo and set up chat state
-    state.isTransitioningTodoId = todo.id;
-    state.expandedTodo = { dayIndex, todoId: todo.id, todo };
-
-    setTimeout(() => {
-      state.isTransitioningTodoId = null;
-    }, 350);
+    state.showConversationDayIndex = dayIndex;
+    state.selectedTodo = { dayIndex, todoId: todo.id, todo };
   }
 
   // Handle day click (only when not in expanded mode)
   function handleDayClick() {
-    if (!state.expandedTodo) {
+    if (!state.selectedTodo) {
       // Normal day expansion behavior could go here if needed
     }
   }
@@ -351,7 +349,7 @@ export function Calendar() {
       transition: "flex-basis 350ms cubic-bezier(0.4, 0.0, 0.2, 1)",
     };
 
-    if (!state.expandedTodo) {
+    if (state.showConversationDayIndex === null) {
       // When nothing is expanded, use explicit equal width
       return {
         ...baseStyle,

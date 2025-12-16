@@ -26,6 +26,7 @@ type RichTextDisplayProps = {
 
 export type SmartEditorApi = {
   clear: () => void;
+  focus: () => void;
   setValue: (value: RichText) => void;
   getValue: () => RichText;
   cancelMention: () => void;
@@ -214,7 +215,7 @@ export function SmartEditor(props: SmartEditorProps) {
   let isInitialMount = true;
   let mentioningRange = null as Range | null; // Track if we're in mention mode to prevent premature submit
 
-  const api = {
+  const api: SmartEditorApi = {
     clear: () => {
       if (ref.current) {
         ref.current.innerHTML = "";

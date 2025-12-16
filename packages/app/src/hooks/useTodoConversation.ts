@@ -1,12 +1,12 @@
-import { useAction, useState } from "rask-ui";
+import { useAction } from "rask-ui";
 import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import { FirebaseContext } from "../contexts/FirebaseContext";
 import { useSyncQuery } from "./useSyncQuery";
 import type { Conversation, Message, Todo } from "@divergent-teams/shared";
 import type { RichText } from "../components/SmartEditor";
 import {
+  arrayUnion,
   doc,
-  runTransaction,
   serverTimestamp,
   setDoc,
   Timestamp,
@@ -32,12 +32,25 @@ export function useTodoConversation(todo: Todo) {
         throw new Error("You have to be authenticated to submit a message");
       }
 
-      let createConversation: (() => void) | undefined;
+      let updateConversation: (() => void) | undefined;
 
-      if (!todo.conversationId) {
-        const conversationsCollection = firebase.collections.conversations(
-          authentication.user.organizationId
+      const conversationsCollection = firebase.collections.conversations(
+        authentication.user.organizationId
+      );
+
+      if (todo.conversationId) {
+        const conversationDoc = doc(
+          conversationsCollection,
+          todo.conversationId
         );
+        const userMentionIds = richText.resources
+          .filter((resource) => resource.type === "user")
+          .map((resource) => resource.userId);
+        updateConversation = () =>
+          updateDoc(conversationDoc, {
+            participantUserIds: arrayUnion(...userMentionIds),
+          });
+      } else {
         const todosCollection = firebase.collections.todos(
           authentication.user.organizationId
         );
@@ -46,11 +59,23 @@ export function useTodoConversation(todo: Todo) {
         const conversation: Conversation = {
           id: conversationDoc.id,
           createdAt: Timestamp.now(),
-          participantUserIds: [authentication.user.id],
+          participantUserIds: [authentication.user.id].concat(
+            ...todo.richText.resources
+              .filter((resource) => resource.type === "user")
+              .map((resource) => resource.userId),
+            ...richText.resources
+              .filter((resource) => resource.type === "user")
+              .map((resource) => resource.userId)
+          ),
+          reference: {
+            type: "todo",
+            id: todo.id,
+          },
         };
+
         const { id: _, ...conversationData } = conversation;
         todo.conversationId = conversation.id;
-        createConversation = () =>
+        updateConversation = () =>
           Promise.all([
             setDoc(conversationDoc, {
               ...conversationData,
@@ -76,7 +101,7 @@ export function useTodoConversation(todo: Todo) {
 
       messages.data.push(message);
 
-      await createConversation?.();
+      await updateConversation?.();
 
       await setDoc(messageDoc, {
         userId: message.userId,
