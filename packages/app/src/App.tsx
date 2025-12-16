@@ -6,12 +6,12 @@ import { Calendar } from "./components/Calendar";
 import { DataContext } from "./contexts/DataContext";
 import { AuthModal } from "./components/AuthModal";
 import { JSONStorageContext } from "./contexts/JSONStorageContext";
-import { MentionsContext } from "./contexts/MentionsContext";
+import { MentionsPaletteContext } from "./contexts/MentionsPaletteContext";
 
 export function App() {
   FirebaseContext.inject();
   ThemeContext.inject();
-  MentionsContext.inject();
+  MentionsPaletteContext.inject();
   JSONStorageContext.inject("divergent-teams");
   const authentication = AuthenticationContext.inject();
   DataContext.inject();

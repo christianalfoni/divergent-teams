@@ -1,14 +1,18 @@
 import type { Timestamp } from "firebase/firestore";
 import type { Resource, RichText } from "./editor-types.js";
 
-export type Mention = {
+type BaseMention = {
   id: string;
   updatedAt: Timestamp;
-} & {
+};
+
+export type UserMention = BaseMention & {
   type: "user";
   userId: string;
   displayName: string;
 };
+
+export type Mention = UserMention;
 
 export interface Conversation {
   id: string;

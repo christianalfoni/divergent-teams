@@ -204,7 +204,7 @@ export default function TodoItem(props: TodoItemProps) {
           onMouseDown={handleMouseDown}
           className={`group/todo relative flex gap-3 text-xs/5 transition-colors px-3 py-2 select-none focus:outline-none cursor-default bg-transparent ${
             props.isActive
-              ? "!bg-(--color-bg-hover)"
+              ? "dark:bg-gray-700/10"
               : "hover:bg-(--color-bg-hover)"
           } ${props.todo.completed ? "opacity-60" : ""}`}
         >

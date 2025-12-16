@@ -3,7 +3,7 @@ import type { Mention } from "@divergent-teams/shared";
 
 export type OnSelectMention = (mention: Mention | null) => void;
 
-export const MentionsContext = createContext(() => {
+export const MentionsPaletteContext = createContext(() => {
   const state = useState({
     isOpen: false,
     onSelect: null as OnSelectMention | null,

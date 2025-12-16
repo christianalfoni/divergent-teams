@@ -31,8 +31,8 @@ export function MentionPalette(props: Props) {
   // Filter items by query
   const filteredItems =
     searchQuery === ""
-      ? data.mentions
-      : data.mentions.filter((item) =>
+      ? data.mentions.users
+      : data.mentions.users.filter((item) =>
           item.displayName.toLowerCase().includes(searchQuery.toLowerCase())
         );
 

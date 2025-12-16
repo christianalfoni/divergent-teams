@@ -1,6 +1,6 @@
-import { createContext, useAsync, useDerived, useEffect } from "rask-ui";
+import { createContext, useDerived, useLookup, useView } from "rask-ui";
 import { FirebaseContext } from "./FirebaseContext";
-import type { Mention, Todo } from "@divergent-teams/shared";
+import type { Mention, Todo, UserMention } from "@divergent-teams/shared";
 import { AuthenticationContext } from "./AuthenticationContext";
 import { useSyncQuery } from "../hooks/useSyncQuery";
 import { query, where } from "firebase/firestore";
@@ -43,9 +43,21 @@ export const DataContext = createContext(() => {
     }
   );
 
-  return useDerived({
+  const derived = useDerived({
     isLoading: () => todos.isLoading || mentions.isLoading,
     todos: () => todos.data,
-    mentions: () => mentions.data,
+    mentions: () =>
+      mentions.data.reduce<{ users: UserMention[] }>(
+        (aggr, mention) => {
+          aggr.users.push(mention);
+          return aggr;
+        },
+        {
+          users: [],
+        }
+      ),
   });
+  const lookupUserMention = useLookup(() => derived.mentions.users, "userId");
+
+  return useView(derived, { lookupUserMention });
 });

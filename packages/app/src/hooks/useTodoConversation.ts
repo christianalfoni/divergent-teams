@@ -7,6 +7,8 @@ import type { RichText } from "../components/SmartEditor";
 import {
   arrayUnion,
   doc,
+  orderBy,
+  query,
   serverTimestamp,
   setDoc,
   Timestamp,
@@ -21,10 +23,12 @@ export function useTodoConversation(todo: Todo) {
       return null;
     }
 
-    return firebase.collections.conversationMessages(
+    const messagesCollection = firebase.collections.conversationMessages(
       authentication.user.organizationId,
       todo.conversationId
     );
+
+    return query(messagesCollection, orderBy("createdAt", "asc"));
   });
   const [submitMessageState, submitMessage] = useAction(
     async (richText: RichText) => {

@@ -9,14 +9,14 @@ import { useAddTodo } from "../hooks/useAddTodo";
 import { DataContext } from "../contexts/DataContext";
 import type { Mention, Todo } from "@divergent-teams/shared";
 import { TodoConversation } from "./TodoConversation";
-import { MentionsContext } from "../contexts/MentionsContext";
+import { MentionsPaletteContext } from "../contexts/MentionsPaletteContext";
 
 // Collapsed column width
 const COLLAPSED_WIDTH = 100;
 
 export function Calendar() {
   const authentication = AuthenticationContext.use();
-  const mentions = MentionsContext.use();
+  const mentions = MentionsPaletteContext.use();
   const data = DataContext.use();
   const weekdays = getWeekdays();
   const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri"];

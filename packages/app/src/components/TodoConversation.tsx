@@ -1,5 +1,5 @@
 import { useRef, useMountEffect } from "rask-ui";
-import { MentionsContext } from "../contexts/MentionsContext";
+import { MentionsPaletteContext } from "../contexts/MentionsPaletteContext";
 import {
   SmartEditor,
   RichTextDisplay,
@@ -8,6 +8,8 @@ import {
 import { useTodoConversation } from "../hooks/useTodoConversation";
 import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import type { Todo } from "@divergent-teams/shared";
+import { MessagesLoadingPlaceholder } from "./MessagesLoadingPlaceholder";
+import { DataContext } from "../contexts/DataContext";
 
 type Props = {
   width: number;
@@ -15,7 +17,8 @@ type Props = {
 };
 
 export function TodoConversation(props: Props) {
-  const mentions = MentionsContext.use();
+  const data = DataContext.use();
+  const mentions = MentionsPaletteContext.use();
   const authentication = AuthenticationContext.use();
   const conversation = useTodoConversation(props.todo);
   const editorRef = useRef<SmartEditorApi>();
@@ -35,7 +38,7 @@ export function TodoConversation(props: Props) {
 
   return () => (
     <div
-      className="shrink-0 flex flex-col bg-(--color-bg-hover) h-full"
+      className="shrink-0 flex flex-col dark:bg-gray-700/10 h-full"
       style={{
         width: `${props.width}px`,
       }}
@@ -45,28 +48,35 @@ export function TodoConversation(props: Props) {
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto p-3 flex flex-col justify-end gap-2"
       >
-        {messages.map((message) => {
-          const isOwnMessage = message.userId === authentication.user?.id;
+        {conversation.messages.isLoading ? (
+          <MessagesLoadingPlaceholder />
+        ) : (
+          messages.map((message) => {
+            const isOwnMessage = message.userId === authentication.user?.id;
 
-          return (
-            <div
-              key={message.id}
-              className={`flex ${
-                isOwnMessage ? "justify-start" : "justify-end"
-              }`}
-            >
+            return (
               <div
-                className={`max-w-[70%] rounded-lg px-3 py-2 ${
-                  isOwnMessage
-                    ? "bg-(--color-accent-primary) text-white"
-                    : "bg-(--color-bg-primary) text-(--color-text-primary)"
+                key={message.id}
+                className={`flex ${
+                  isOwnMessage ? "justify-start" : "justify-end"
                 }`}
               >
-                <RichTextDisplay value={message.richText} />
+                <div
+                  className={`max-w-[70%] rounded-lg px-3 py-2 ${
+                    isOwnMessage
+                      ? "bg-(--color-accent-primary) text-white"
+                      : "bg-(--color-bg-primary) text-(--color-text-primary)"
+                  }`}
+                >
+                  <div className="text-xs opacity-75 mb-1">
+                    {data.lookupUserMention(message.userId)?.displayName}
+                  </div>
+                  <RichTextDisplay value={message.richText} />
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
       {/* Message input - at bottom */}
