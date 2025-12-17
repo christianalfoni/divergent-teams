@@ -51,9 +51,11 @@ export interface User {
   updatedAt: Timestamp;
 }
 
-export interface Project {
+export interface Team {
   id: string;
-  title: string;
+  name: string;
+  mission: string;
+  members: string[];
 }
 
 export interface Todo {

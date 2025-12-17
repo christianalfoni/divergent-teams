@@ -218,6 +218,14 @@
 
   .smartlinks.is-editing {
     outline: none;
+    color: inherit;
+  }
+
+  .smartlinks.is-editing:empty:before {
+    content: attr(data-placeholder);
+    color: var(--color-text-tertiary);
+    opacity: 0.5;
+    pointer-events: none;
   }
 
   .smartlink-chip {

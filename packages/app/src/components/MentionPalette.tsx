@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "rask-ui";
+import { useState, useRef, useEffect, useDerived } from "rask-ui";
 import type { Mention } from "@divergent-teams/shared";
 import { DataContext } from "../contexts/DataContext";
 
@@ -12,8 +12,16 @@ export function MentionPalette(props: Props) {
   const data = DataContext.use();
   const state = useState({
     selectedIndex: 0,
-    internalQuery: "",
+    query: "",
     activeItem: null as Mention | null,
+  });
+  const derived = useDerived({
+    filteredItems: () =>
+      state.query === ""
+        ? data.mentions.users
+        : data.mentions.users.filter((item) =>
+            item.displayName.toLowerCase().includes(state.query.toLowerCase())
+          ),
   });
 
   const inputRef = useRef<HTMLInputElement>();
@@ -25,25 +33,6 @@ export function MentionPalette(props: Props) {
     }
   });
 
-  // Use internal query for search
-  const searchQuery = state.internalQuery;
-
-  // Filter items by query
-  const filteredItems =
-    searchQuery === ""
-      ? data.mentions.users
-      : data.mentions.users.filter((item) =>
-          item.displayName.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-
-  // Update selected index when filtered items change
-  if (state.selectedIndex >= filteredItems.length) {
-    state.selectedIndex = Math.max(0, filteredItems.length - 1);
-  }
-
-  // Update active item based on selected index
-  state.activeItem = filteredItems[state.selectedIndex] || null;
-
   const handleSelect = (item: Mention) => {
     props.onSelect?.(item);
   };
@@ -53,15 +42,15 @@ export function MentionPalette(props: Props) {
       e.preventDefault();
       state.selectedIndex = Math.min(
         state.selectedIndex + 1,
-        filteredItems.length - 1
+        derived.filteredItems.length - 1
       );
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       state.selectedIndex = Math.max(state.selectedIndex - 1, 0);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (filteredItems[state.selectedIndex]) {
-        handleSelect(filteredItems[state.selectedIndex]);
+      if (derived.filteredItems[state.selectedIndex]) {
+        handleSelect(derived.filteredItems[state.selectedIndex]);
       }
     } else if (e.key === "Escape") {
       e.preventDefault();
@@ -77,6 +66,14 @@ export function MentionPalette(props: Props) {
     if (!props.open) {
       return null;
     }
+
+    const selectedIndex =
+      state.selectedIndex >= derived.filteredItems.length
+        ? Math.max(0, derived.filteredItems.length - 1)
+        : state.selectedIndex;
+
+    // Update active item based on selected index
+    state.activeItem = derived.filteredItems[selectedIndex] || null;
 
     return (
       <>
@@ -96,9 +93,9 @@ export function MentionPalette(props: Props) {
                 type="text"
                 className="w-full h-12 pl-11 pr-4 text-base text-gray-900 dark:text-white bg-transparent outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 placeholder="Search..."
-                value={state.internalQuery}
+                value={state.query}
                 onInput={(e) => {
-                  state.internalQuery = (e.target as HTMLInputElement).value;
+                  state.query = (e.target as HTMLInputElement).value;
                   state.selectedIndex = 0;
                 }}
                 onKeyDown={handleInputKeyDown}
@@ -119,7 +116,7 @@ export function MentionPalette(props: Props) {
             </div>
 
             {/* Results and Preview */}
-            {filteredItems.length > 0 ? (
+            {derived.filteredItems.length > 0 ? (
               <div className="flex divide-x divide-gray-100 dark:divide-white/10">
                 {/* Results List */}
                 <div
@@ -127,13 +124,13 @@ export function MentionPalette(props: Props) {
                     state.activeItem ? "sm:h-96" : ""
                   }`}
                 >
-                  {searchQuery === "" && (
+                  {state.query === "" && (
                     <h2 className="mt-2 mb-4 text-xs font-semibold text-gray-500 dark:text-gray-400">
                       Recent searches
                     </h2>
                   )}
                   <div className="-mx-2 text-sm text-gray-700 dark:text-gray-300">
-                    {filteredItems.map((item, index) => (
+                    {derived.filteredItems.map((item, index) => (
                       <div
                         key={item.id}
                         className={`flex items-center rounded-md p-2 cursor-pointer select-none ${
@@ -205,13 +202,6 @@ export function MentionPalette(props: Props) {
                       <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm text-gray-700 dark:text-gray-300">
                         {/* CONTENT */}
                       </dl>
-                      <button
-                        type="button"
-                        className="mt-6 w-full rounded-md bg-indigo-600 dark:bg-indigo-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 dark:hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:focus-visible:outline-indigo-500"
-                        onClick={() => handleSelect(state.activeItem!)}
-                      >
-                        Select
-                      </button>
                     </div>
                   </div>
                 )}

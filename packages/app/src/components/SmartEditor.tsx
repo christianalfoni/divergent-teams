@@ -15,6 +15,7 @@ type SmartEditorProps = {
   onBlur?: () => void;
   availableTags?: string[]; // List of all tag texts from other todos for autocomplete
   onMention?: (smartEditorApi: SmartEditorApi) => void;
+  className?: string;
 };
 
 type RichTextDisplayProps = {
@@ -303,6 +304,7 @@ export function SmartEditor(props: SmartEditorProps) {
     if (!props.onSubmit || !ref.current || mentioningRange) return;
     const richText = htmlToRichText(ref.current.innerHTML);
     props.onSubmit(richText);
+    api.clear();
   };
 
   // Handle input to update shadow and check for mentions
@@ -630,12 +632,14 @@ export function SmartEditor(props: SmartEditorProps) {
       }
     }
 
-    // Submit on Enter if not already submitted
+    // Submit on Enter if not already submitted and onSubmit is provided
     if (e.key === "Enter" && !e.shiftKey) {
-      if (!alreadySubmitted) {
+      if (props.onSubmit && !alreadySubmitted) {
+        e.preventDefault();
         emitChange();
+        return; // Don't call external handler for Enter - it's handled by onSubmit
       }
-      return; // Don't call external handler for Enter - it's handled by onSubmit
+      // If no onSubmit, allow default behavior (new line)
     }
 
     // Call external handler if provided (but not for Enter)
@@ -702,7 +706,7 @@ export function SmartEditor(props: SmartEditorProps) {
   return () => (
     <div
       ref={ref}
-      className="smartlinks is-editing"
+      className={`smartlinks is-editing ${props.className || ""}`}
       onPaste={onPaste}
       onInput={handleInput}
       onKeyDown={onKeyDown}

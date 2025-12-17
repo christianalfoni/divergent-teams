@@ -16,6 +16,31 @@ type Props = {
   todo: Todo;
 };
 
+function formatTimestamp(timestamp: { toDate: () => Date }): string {
+  const date = timestamp.toDate();
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  // For older messages, show date
+  const isThisYear = date.getFullYear() === now.getFullYear();
+  if (isThisYear) {
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export function TodoConversation(props: Props) {
   const data = DataContext.use();
   const mentions = MentionsPaletteContext.use();
@@ -62,14 +87,15 @@ export function TodoConversation(props: Props) {
                 }`}
               >
                 <div
-                  className={`max-w-[70%] rounded-lg px-3 py-2 ${
-                    isOwnMessage
-                      ? "bg-(--color-accent-primary) text-white"
-                      : "bg-(--color-bg-primary) text-(--color-text-primary)"
-                  }`}
+                  className={`max-w-[70%] rounded-lg px-3 py-2 bg-(--color-bg-primary) text-(--color-text-primary)`}
                 >
-                  <div className="text-xs opacity-75 mb-1">
-                    {data.lookupUserMention(message.userId)?.displayName}
+                  <div className="text-xs opacity-75 mb-1 flex items-center gap-2">
+                    <span className="font-medium">
+                      {data.lookupUserMention(message.userId)?.displayName}
+                    </span>
+                    <span className="opacity-60">
+                      {formatTimestamp(message.createdAt)}
+                    </span>
                   </div>
                   <RichTextDisplay value={message.richText} />
                 </div>
@@ -81,7 +107,7 @@ export function TodoConversation(props: Props) {
 
       {/* Message input - at bottom */}
       <div className="p-3 pt-0">
-        <div className="border border-(--color-border-secondary) rounded-lg px-3 py-2 bg-(--color-bg-primary) text-(--color-text-primary)">
+        <div className="overflow-hidden rounded-lg px-3 py-2 outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:bg-white/5 dark:outline-white/10 dark:focus-within:outline-indigo-500 text-(--color-text-primary)">
           <SmartEditor
             apiRef={editorRef}
             placeholder="Type a message..."
@@ -91,7 +117,6 @@ export function TodoConversation(props: Props) {
               }
 
               conversation.submitMessage(richText);
-              editorRef.current?.clear();
             }}
             onMention={(api) => {
               mentions.open((mention) => {
