@@ -1,5 +1,5 @@
 import { useRef, useMountEffect } from "rask-ui";
-import { MentionsPaletteContext } from "../contexts/MentionsPaletteContext";
+import { SearchPaletteContext } from "../contexts/SearchPaletteContext";
 import {
   SmartEditor,
   RichTextDisplay,
@@ -43,7 +43,7 @@ function formatTimestamp(timestamp: { toDate: () => Date }): string {
 
 export function TodoConversation(props: Props) {
   const data = DataContext.use();
-  const mentions = MentionsPaletteContext.use();
+  const searchPalette = SearchPaletteContext.use();
   const authentication = AuthenticationContext.use();
   const conversation = useTodoConversation(props.todo);
   const editorRef = useRef<SmartEditorApi>();
@@ -119,7 +119,7 @@ export function TodoConversation(props: Props) {
               conversation.submitMessage(richText);
             }}
             onMention={(api) => {
-              mentions.open((mention) => {
+              searchPalette.openForMention((mention) => {
                 if (!mention) {
                   return;
                 }

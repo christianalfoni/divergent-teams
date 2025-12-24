@@ -2,21 +2,20 @@ import { useEffect, useState, useRef, useDerived } from "rask-ui";
 import TodoItem from "./TodoItem";
 import { getCurrentDayIndex, getWeekdays, isSameDay } from "../utils/calendar";
 import { SmartEditor, type SmartEditorApi } from "./SmartEditor";
-import { MentionPalette } from "./MentionPalette";
 import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import { TodosLoadingPlaceholder } from "./TodosLoadingPlaceholder";
 import { useAddTodo } from "../hooks/useAddTodo";
 import { DataContext } from "../contexts/DataContext";
 import type { Mention, Todo } from "@divergent-teams/shared";
 import { TodoConversation } from "./TodoConversation";
-import { MentionsPaletteContext } from "../contexts/MentionsPaletteContext";
+import { SearchPaletteContext } from "../contexts/SearchPaletteContext";
 
 // Collapsed column width
 const COLLAPSED_WIDTH = 100;
 
 export function Calendar() {
   const authentication = AuthenticationContext.use();
-  const mentions = MentionsPaletteContext.use();
+  const searchPalette = SearchPaletteContext.use();
   const data = DataContext.use();
   const weekdays = getWeekdays();
   const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -65,13 +64,6 @@ export function Calendar() {
 
   return () => (
     <div className="flex-1 w-full flex flex-col overflow-hidden">
-      {/* Mention Palette */}
-      <MentionPalette
-        open={mentions.isOpen}
-        query=""
-        onSelect={mentions.onSelect}
-      />
-
       <div className="flex flex-1 min-h-0">
         {weekdays.map((date, index) => (
           <div
@@ -213,7 +205,7 @@ export function Calendar() {
                               onBlur={() => handleEditorBlur(index)}
                               availableTags={[]}
                               onMention={(api) => {
-                                mentions.open((mention) => {
+                                searchPalette.openForMention((mention) => {
                                   if (state.addingTodoDayIndex !== index) {
                                     return;
                                   }

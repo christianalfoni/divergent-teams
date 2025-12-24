@@ -7,17 +7,14 @@ import { Calendar } from "./components/Calendar";
 import { DataContext } from "./contexts/DataContext";
 import { AuthModal } from "./components/AuthModal";
 import { JSONStorageContext } from "./contexts/JSONStorageContext";
-import { MentionsPaletteContext } from "./contexts/MentionsPaletteContext";
-import { CommandPaletteContext } from "./contexts/CommandPaletteContext";
-import { CommandPalette } from "./components/CommandPalette";
+import { SearchPaletteContext } from "./contexts/SearchPaletteContext";
+import { SearchPalette } from "./components/SearchPalette";
 import { CreateTeamDrawer } from "./components/CreateTeamDrawer";
-import { useGlobalActions } from "./hooks/useGlobalActions";
 
 export function App() {
   FirebaseContext.inject();
   ThemeContext.inject();
-  MentionsPaletteContext.inject();
-  CommandPaletteContext.inject();
+  SearchPaletteContext.inject();
   JSONStorageContext.inject("divergent-teams");
   const authentication = AuthenticationContext.inject();
   DataContext.inject();
@@ -30,10 +27,6 @@ export function App() {
     state.showCreateTeamModal = false;
   };
 
-  useGlobalActions({
-    openCreateTeamModal,
-  });
-
   const state = useState({
     showCreateTeamModal: false,
   });
@@ -44,10 +37,10 @@ export function App() {
 
     return (
       <div class="min-h-screen bg-(--color-bg-primary) flex flex-col">
-        <TopBar />
+        <TopBar onCreateTeam={openCreateTeamModal} />
         <Calendar />
         {showAuthModal ? <AuthModal /> : null}
-        <CommandPalette />
+        <SearchPalette />
         <CreateTeamDrawer
           isOpen={state.showCreateTeamModal}
           onClose={closeCreateTeamModal}

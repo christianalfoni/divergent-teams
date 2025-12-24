@@ -1,40 +1,71 @@
 import { useState, useRef, useEffect, useDerived } from "rask-ui";
-import type { Mention } from "@divergent-teams/shared";
+import { SearchPaletteContext } from "../contexts/SearchPaletteContext";
 import { DataContext } from "../contexts/DataContext";
+import type { Mention, UserMention, TeamMention } from "@divergent-teams/shared";
+import { UserGroupIcon } from "./icons/UserGroupIcon";
+import { UserDrawer } from "./UserDrawer";
+import { TeamDrawer } from "./TeamDrawer";
+import { UserPreview } from "./UserPreview";
+import { TeamPreview } from "./TeamPreview";
 
-type Props = {
-  open: boolean;
-  query: string;
-  onSelect: ((mention: Mention | null) => void) | null;
-};
-
-export function MentionPalette(props: Props) {
+export function SearchPalette() {
+  const searchPalette = SearchPaletteContext.use();
   const data = DataContext.use();
   const state = useState({
     selectedIndex: 0,
     query: "",
     activeItem: null as Mention | null,
+    userDrawerOpen: false,
+    selectedUser: null as UserMention | null,
+    teamDrawerOpen: false,
+    selectedTeam: null as TeamMention | null,
   });
   const derived = useDerived({
-    filteredItems: () =>
-      state.query === ""
-        ? data.mentions.users
-        : data.mentions.users.filter((item) =>
-            item.displayName.toLowerCase().includes(state.query.toLowerCase())
-          ),
+    filteredMentions: () => {
+      const allMentions = [...data.mentions.users, ...data.mentions.teams];
+      if (state.query === "") {
+        return allMentions;
+      }
+      return allMentions.filter((item) => {
+        const searchTerm = state.query.toLowerCase();
+        if (item.type === "user") {
+          return item.displayName.toLowerCase().includes(searchTerm);
+        } else if (item.type === "team") {
+          return item.name.toLowerCase().includes(searchTerm);
+        }
+        return false;
+      });
+    },
   });
 
   const inputRef = useRef<HTMLInputElement>();
 
   // Focus input when palette opens
   useEffect(() => {
-    if (props.open && inputRef.current) {
+    if (searchPalette.isOpen && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 0);
+      state.query = "";
+      state.selectedIndex = 0;
     }
   });
 
-  const handleSelect = (item: Mention) => {
-    props.onSelect?.(item);
+  const handleSelect = (mention: Mention) => {
+    if (searchPalette.mode === "mention") {
+      // Mention mode: call the onSelect callback
+      searchPalette.onSelectMention?.(mention);
+    } else {
+      // Drawer mode: open the appropriate drawer and close palette immediately
+      if (mention.type === "user") {
+        state.selectedUser = mention;
+        state.userDrawerOpen = true;
+      } else if (mention.type === "team") {
+        state.selectedTeam = mention;
+        state.teamDrawerOpen = true;
+      }
+      // Close palette immediately
+      searchPalette.close();
+      state.query = "";
+    }
   };
 
   const handleInputKeyDown = (e: Rask.KeyboardEvent) => {
@@ -42,19 +73,23 @@ export function MentionPalette(props: Props) {
       e.preventDefault();
       state.selectedIndex = Math.min(
         state.selectedIndex + 1,
-        derived.filteredItems.length - 1
+        derived.filteredMentions.length - 1
       );
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       state.selectedIndex = Math.max(state.selectedIndex - 1, 0);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (derived.filteredItems[state.selectedIndex]) {
-        handleSelect(derived.filteredItems[state.selectedIndex]);
+      if (derived.filteredMentions[state.selectedIndex]) {
+        handleSelect(derived.filteredMentions[state.selectedIndex]);
       }
     } else if (e.key === "Escape") {
       e.preventDefault();
-      props.onSelect?.(null);
+      if (searchPalette.mode === "mention") {
+        searchPalette.onSelectMention?.(null);
+      } else {
+        searchPalette.close();
+      }
     }
   };
 
@@ -63,36 +98,41 @@ export function MentionPalette(props: Props) {
   };
 
   return () => {
-    if (!props.open) {
-      return null;
-    }
-
     const selectedIndex =
-      state.selectedIndex >= derived.filteredItems.length
-        ? Math.max(0, derived.filteredItems.length - 1)
+      state.selectedIndex >= derived.filteredMentions.length
+        ? Math.max(0, derived.filteredMentions.length - 1)
         : state.selectedIndex;
 
     // Update active item based on selected index
-    state.activeItem = derived.filteredItems[selectedIndex] || null;
+    state.activeItem = derived.filteredMentions[selectedIndex] || null;
 
     return (
       <>
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-gray-500/25 dark:bg-gray-900/50 z-50 transition-opacity"
-          onClick={() => props.onSelect?.(null)}
-        />
+        {/* Search Palette - Only shown when open */}
+        {searchPalette.isOpen && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-gray-500/25 dark:bg-gray-900/50 z-50 transition-opacity"
+              onClick={() => {
+                if (searchPalette.mode === "mention") {
+                  searchPalette.onSelectMention?.(null);
+                } else {
+                  searchPalette.close();
+                }
+              }}
+            />
 
-        {/* Palette */}
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] pointer-events-none p-4 sm:p-6">
-          <div className="w-full max-w-3xl bg-white dark:bg-gray-900 rounded-xl shadow-2xl pointer-events-auto overflow-hidden divide-y divide-gray-100 dark:divide-white/10 ring-1 ring-black/5 dark:ring-white/10">
+            {/* Palette */}
+            <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] pointer-events-none p-4 sm:p-6">
+          <div className="w-full max-w-3xl bg-white dark:bg-gray-900 rounded-xl shadow-2xl pointer-events-auto overflow-hidden divide-y divide-gray-100 dark:divide-white/10 ring-1 ring-black/5 dark:ring-white/10 transform transition-all">
             {/* Search Input */}
             <div className="relative">
               <input
                 ref={inputRef}
                 type="text"
                 className="w-full h-12 pl-11 pr-4 text-base text-gray-900 dark:text-white bg-transparent outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                placeholder="Search..."
+                placeholder="Search people & teams..."
                 value={state.query}
                 onInput={(e) => {
                   state.query = (e.target as HTMLInputElement).value;
@@ -116,7 +156,7 @@ export function MentionPalette(props: Props) {
             </div>
 
             {/* Results and Preview */}
-            {derived.filteredItems.length > 0 ? (
+            {derived.filteredMentions.length > 0 ? (
               <div className="flex divide-x divide-gray-100 dark:divide-white/10">
                 {/* Results List */}
                 <div
@@ -126,15 +166,15 @@ export function MentionPalette(props: Props) {
                 >
                   {state.query === "" && (
                     <h2 className="mt-2 mb-4 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                      Recent searches
+                      People & Teams
                     </h2>
                   )}
                   <div className="-mx-2 text-sm text-gray-700 dark:text-gray-300">
-                    {derived.filteredItems.map((item, index) => (
+                    {derived.filteredMentions.map((item, index) => (
                       <div
                         key={item.id}
                         className={`flex items-center rounded-md p-2 cursor-pointer select-none ${
-                          state.selectedIndex === index
+                          selectedIndex === index
                             ? "bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white"
                             : ""
                         }`}
@@ -145,19 +185,15 @@ export function MentionPalette(props: Props) {
                           <div className="w-6 h-6 flex-none rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-medium">
                             {item.displayName.charAt(0)}
                           </div>
-                        ) : item.type === "project" ? (
-                          <div className="w-6 h-6 flex-none rounded-md bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 text-xs">
-                            📁
-                          </div>
                         ) : (
-                          <div className="w-6 h-6 flex-none rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 text-xs">
-                            🐛
+                          <div className="w-6 h-6 flex-none text-gray-600 dark:text-gray-400">
+                            <UserGroupIcon />
                           </div>
                         )}
                         <span className="ml-3 flex-auto truncate">
-                          {item.displayName}
+                          {item.type === "user" ? item.displayName : item.name}
                         </span>
-                        {state.selectedIndex === index && (
+                        {selectedIndex === index && (
                           <svg
                             className="ml-3 w-5 h-5 flex-none text-gray-400 dark:text-gray-500"
                             fill="none"
@@ -180,29 +216,17 @@ export function MentionPalette(props: Props) {
                 {/* Preview Panel */}
                 {state.activeItem && (
                   <div className="hidden sm:flex w-1/2 flex-none flex-col divide-y divide-gray-100 dark:divide-white/10 overflow-y-auto h-96">
-                    <div className="flex-none p-6 text-center">
-                      {state.activeItem.type === "user" ? (
-                        <div className="mx-auto w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-medium text-2xl">
-                          {state.activeItem.displayName.charAt(0)}
-                        </div>
-                      ) : state.activeItem.type === "project" ? (
-                        <div className="mx-auto w-16 h-16 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 text-3xl">
-                          📁
-                        </div>
-                      ) : (
-                        <div className="mx-auto w-16 h-16 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 text-3xl">
-                          🐛
-                        </div>
-                      )}
-                      <h2 className="mt-3 font-semibold text-gray-900 dark:text-white">
-                        {state.activeItem.displayName}
-                      </h2>
-                    </div>
-                    <div className="flex flex-auto flex-col justify-between p-6">
-                      <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm text-gray-700 dark:text-gray-300">
-                        {/* CONTENT */}
-                      </dl>
-                    </div>
+                    {state.activeItem.type === "user" ? (
+                      <UserPreview
+                        key={state.activeItem.id}
+                        user={state.activeItem}
+                      />
+                    ) : (
+                      <TeamPreview
+                        key={state.activeItem.id}
+                        team={state.activeItem}
+                      />
+                    )}
                   </div>
                 )}
               </div>
@@ -231,6 +255,24 @@ export function MentionPalette(props: Props) {
             )}
           </div>
         </div>
+          </>
+        )}
+
+        {/* Drawers - Always rendered, independent of palette state */}
+        <UserDrawer
+          isOpen={state.userDrawerOpen}
+          user={state.selectedUser}
+          onClose={() => {
+            state.userDrawerOpen = false;
+          }}
+        />
+        <TeamDrawer
+          isOpen={state.teamDrawerOpen}
+          team={state.selectedTeam}
+          onClose={() => {
+            state.teamDrawerOpen = false;
+          }}
+        />
       </>
     );
   };

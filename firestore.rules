@@ -28,6 +28,35 @@ service cloud.firestore {
       allow read: if isOrgMember();
     }
 
+    // Rules for teams within an organization
+    match /organizations/{organizationId}/teams/{teamId} {
+
+      // Helper function to check if user belongs to the organization
+      function isOrgMember() {
+        return request.auth != null
+          && request.auth.token.organizationId == organizationId;
+      }
+
+      // Helper function to check if user is the creator (for existing docs)
+      function isCreator() {
+        return resource.data.createdBy == request.auth.uid;
+      }
+
+      // Helper function to check if user is creating with themselves as creator
+      function isCreatingAsCreator() {
+        return request.resource.data.createdBy == request.auth.uid;
+      }
+
+      // Allow read if user is org member
+      allow read: if isOrgMember();
+
+      // Allow create if user is org member and setting themselves as creator
+      allow create: if isOrgMember() && isCreatingAsCreator();
+
+      // Allow delete if user is org member and is the creator
+      allow delete: if isOrgMember() && isCreator();
+    }
+
     // Rules for todos within an organization
     match /organizations/{organizationId}/todos/{todoId} {
 

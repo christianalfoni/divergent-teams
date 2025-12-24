@@ -1,6 +1,11 @@
 import { createContext, useDerived, useLookup, useView } from "rask-ui";
 import { FirebaseContext } from "./FirebaseContext";
-import type { Mention, Todo, UserMention } from "@divergent-teams/shared";
+import type {
+  Mention,
+  Todo,
+  UserMention,
+  TeamMention,
+} from "@divergent-teams/shared";
 import { AuthenticationContext } from "./AuthenticationContext";
 import { useSyncQuery } from "../hooks/useSyncQuery";
 import { query, where } from "firebase/firestore";
@@ -47,13 +52,18 @@ export const DataContext = createContext(() => {
     isLoading: () => todos.isLoading || mentions.isLoading,
     todos: () => todos.data,
     mentions: () =>
-      mentions.data.reduce<{ users: UserMention[] }>(
+      mentions.data.reduce<{ users: UserMention[]; teams: TeamMention[] }>(
         (aggr, mention) => {
-          aggr.users.push(mention);
+          if (mention.type === "user") {
+            aggr.users.push(mention);
+          } else if (mention.type === "team") {
+            aggr.teams.push(mention);
+          }
           return aggr;
         },
         {
           users: [],
+          teams: [],
         }
       ),
   });

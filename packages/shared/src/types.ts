@@ -12,7 +12,13 @@ export type UserMention = BaseMention & {
   displayName: string;
 };
 
-export type Mention = UserMention;
+export type TeamMention = BaseMention & {
+  type: "team";
+  name: string;
+  members: string[];
+};
+
+export type Mention = UserMention | TeamMention;
 
 export interface Conversation {
   id: string;
@@ -34,6 +40,7 @@ export interface Message {
 export interface Issue {
   id: string;
   title: string;
+  createdBy: string;
   description: string;
 }
 
@@ -54,7 +61,8 @@ export interface User {
 export interface Team {
   id: string;
   name: string;
-  mission: string;
+  createdBy: string;
+  mission: RichText;
   members: string[];
 }
 

@@ -55,3 +55,50 @@ export const onUserUpdate = onDocumentWritten(
     );
   }
 );
+
+/**
+ * onDocumentWritten trigger for teams
+ * Syncs team changes to the mentions collection
+ */
+export const onTeamUpdate = onDocumentWritten(
+  {
+    document: "organizations/{orgId}/teams/{teamId}",
+    region: "us-central1",
+  },
+  async (event) => {
+    // Guard clause for event data
+    if (!event.data) {
+      return;
+    }
+
+    // Capture the Org ID and Team ID from the path
+    const orgId = event.params.orgId as string;
+    const teamId = event.params.teamId as string;
+
+    const newData = event.data.after.exists ? event.data.after.data() : null;
+
+    // Reference the mention document inside the specific organization
+    const mentionRef = db
+      .collection("organizations")
+      .doc(orgId)
+      .collection("mentions")
+      .doc(teamId);
+
+    // If team was deleted, delete the mention
+    if (!newData) {
+      await mentionRef.delete();
+      return;
+    }
+
+    // Create/update the mention with team name and members
+    await mentionRef.set(
+      {
+        type: "team",
+        name: newData?.name || "",
+        members: newData?.members || [],
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+);

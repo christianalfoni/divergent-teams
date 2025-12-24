@@ -22,6 +22,9 @@ export const FirebaseContext = createContext(() => {
     mentions(organizationId: string) {
       return collection(firestore, "organizations", organizationId, "mentions");
     },
+    teams(organizationId: string) {
+      return collection(firestore, "organizations", organizationId, "teams");
+    },
     conversations(organizationId: string) {
       return collection(
         firestore,

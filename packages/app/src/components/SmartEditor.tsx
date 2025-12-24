@@ -16,11 +16,13 @@ type SmartEditorProps = {
   availableTags?: string[]; // List of all tag texts from other todos for autocomplete
   onMention?: (smartEditorApi: SmartEditorApi) => void;
   className?: string;
+  disabled?: boolean;
 };
 
 type RichTextDisplayProps = {
   value: RichText;
   onUserClick?: (userId: string) => void;
+  onTeamClick?: (teamId: string) => void;
   onProjectClick?: (projectId: string) => void;
   onIssueClick?: (issueId: string) => void;
 };
@@ -55,6 +57,9 @@ function richTextToHtml(data: RichText): string {
         break;
       case "user":
         replacement = `<span data-user="${entity.userId}" contenteditable="false" class="mention-person">${entity.display}</span>`;
+        break;
+      case "team":
+        replacement = `<span data-team="${entity.teamId}" contenteditable="false" class="mention-person">${entity.display}</span>`;
         break;
       case "project":
         replacement = `<span data-project="${entity.projectId}" contenteditable="false" class="mention-project">${entity.display}</span>`;
@@ -99,6 +104,15 @@ function htmlToRichText(html: string): RichText {
     /<span\b[^>]*\bdata-user="([^"]+)"[^>]*>([^<]*)<\/span>/g,
     (match, userId, display) => {
       entities.push({ type: "user", userId, display });
+      return `[[${index++}]]`;
+    }
+  );
+
+  // Replace team mentions (match data-team anywhere in the tag)
+  text = text.replace(
+    /<span\b[^>]*\bdata-team="([^"]+)"[^>]*>([^<]*)<\/span>/g,
+    (match, teamId, display) => {
+      entities.push({ type: "team", teamId, display });
       return `[[${index++}]]`;
     }
   );
@@ -173,6 +187,18 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
               className="mention-person"
               onClick={() => props.onUserClick?.(entity.userId)}
               style={{ cursor: props.onUserClick ? "pointer" : "default" }}
+            >
+              {entity.display}
+            </span>
+          );
+
+        case "team":
+          return (
+            <span
+              key={i}
+              className="mention-person"
+              onClick={() => props.onTeamClick?.(entity.teamId)}
+              style={{ cursor: props.onTeamClick ? "pointer" : "default" }}
             >
               {entity.display}
             </span>
@@ -277,7 +303,7 @@ export function SmartEditor(props: SmartEditorProps) {
     const el = ref.current;
     if (!el) return;
 
-    el.contentEditable = "true";
+    el.contentEditable = props.disabled ? "false" : "true";
 
     // Set innerHTML on initial mount
     if (isInitialMount) {
@@ -286,7 +312,7 @@ export function SmartEditor(props: SmartEditorProps) {
     }
 
     // Auto-focus if requested
-    if (props.focus && el) {
+    if (props.focus && el && !props.disabled) {
       el.focus();
       // Move cursor to end
       const range = document.createRange();
@@ -353,7 +379,7 @@ export function SmartEditor(props: SmartEditorProps) {
     return pill;
   }
 
-  // Create mention span for user/project/issue
+  // Create mention span for user/team
   function makeMentionSpan(mention: Mention) {
     const span = document.createElement("span");
     span.setAttribute("contenteditable", "false");
@@ -362,6 +388,11 @@ export function SmartEditor(props: SmartEditorProps) {
       case "user":
         span.setAttribute("data-user", mention.userId);
         span.textContent = mention.displayName;
+        span.className = "mention-person";
+        break;
+      case "team":
+        span.setAttribute("data-team", mention.id);
+        span.textContent = mention.name;
         span.className = "mention-person";
         break;
     }
@@ -706,7 +737,7 @@ export function SmartEditor(props: SmartEditorProps) {
   return () => (
     <div
       ref={ref}
-      className={`smartlinks is-editing ${props.className || ""}`}
+      className={`smartlinks is-editing ${props.disabled ? "is-disabled" : ""} ${props.className || ""}`}
       onPaste={onPaste}
       onInput={handleInput}
       onKeyDown={onKeyDown}

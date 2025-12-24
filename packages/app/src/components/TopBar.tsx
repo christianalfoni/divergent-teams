@@ -1,4 +1,10 @@
-export function TopBar() {
+import { UserGroupIcon } from "./icons/UserGroupIcon";
+
+type Props = {
+  onCreateTeam: () => void;
+};
+
+export function TopBar(props: Props) {
   return (
     <nav class="border-b bg-(--color-bg-nav) border-(--color-border-primary)">
       <div class="px-4">
@@ -12,7 +18,15 @@ export function TopBar() {
           </div>
 
           <div class="hidden sm:ml-6 sm:flex sm:items-center gap-3">
-            {/* Top bar content will go here */}
+            <button
+              onClick={props.onCreateTeam}
+              class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            >
+              <div class="w-4 h-4">
+                <UserGroupIcon />
+              </div>
+              Create team
+            </button>
           </div>
         </div>
       </div>
