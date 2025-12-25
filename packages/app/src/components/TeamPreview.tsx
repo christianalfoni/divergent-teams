@@ -1,11 +1,14 @@
 import type { TeamMention } from "@divergent-teams/shared";
 import { UserGroupIcon } from "./icons/UserGroupIcon";
+import { DataContext } from "../contexts/DataContext";
 
 type Props = {
   team: TeamMention;
 };
 
 export function TeamPreview(props: Props) {
+  const data = DataContext.use();
+
   return () => (
     <div className="flex flex-col p-6">
       {/* Team Header */}
@@ -19,19 +22,37 @@ export function TeamPreview(props: Props) {
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">
             {props.team.name}
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Team</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {props.team.members.length} member
+            {props.team.members.length !== 1 ? "s" : ""}
+          </p>
         </div>
       </div>
 
-      {/* Team Info */}
-      <div className="space-y-3">
-        <div>
-          <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            Team ID
-          </dt>
-          <dd className="mt-1 text-sm text-gray-900 dark:text-white font-mono">
-            {props.team.teamId}
-          </dd>
+      {/* Members List */}
+      <div className="mt-6">
+        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3">
+          MEMBERS
+        </h3>
+        <div className="space-y-2">
+          {props.team.members.map((userId) => {
+            const user = data.lookupUserMention(userId);
+            if (!user) return null;
+
+            return (
+              <div
+                key={userId}
+                className="flex items-center text-sm text-gray-700 dark:text-gray-300"
+              >
+                <div className="w-6 h-6 flex-none rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-medium">
+                  {user.displayName.charAt(0)}
+                </div>
+                <span className="ml-3 flex-auto truncate">
+                  {user.displayName}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

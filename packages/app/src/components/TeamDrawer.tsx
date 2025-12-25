@@ -2,6 +2,7 @@ import { useState, useEffect } from "rask-ui";
 import type { TeamMention } from "@divergent-teams/shared";
 import { DataContext } from "../contexts/DataContext";
 import { UserGroupIcon } from "./icons/UserGroupIcon";
+import { useTeam } from "../hooks/useTeam";
 
 type TeamDrawerProps = {
   isOpen: boolean;
@@ -11,6 +12,7 @@ type TeamDrawerProps = {
 
 export function TeamDrawer(props: TeamDrawerProps) {
   const data = DataContext.use();
+  const teamState = props.team ? useTeam(props.team.id) : null;
   const state = useState({
     isVisible: false,
     isAnimating: false,
@@ -33,6 +35,48 @@ export function TeamDrawer(props: TeamDrawerProps) {
       }, 500);
     }
   });
+
+  function renderMission() {
+    if (!teamState) return null;
+
+    if (teamState.error) {
+      return (
+        <span class="text-red-600 dark:text-red-400">
+          {String(teamState.error)}
+        </span>
+      );
+    }
+
+    if (teamState.isLoading) {
+      return (
+        <div class="animate-pulse space-y-2">
+          <div class="h-4 w-full bg-(--color-skeleton) rounded"></div>
+          <div class="h-4 w-3/4 bg-(--color-skeleton) rounded"></div>
+        </div>
+      );
+    }
+
+    return teamState.value.mission.text || "No mission statement";
+  }
+
+  function renderCreatedBy() {
+    if (!teamState) return null;
+
+    if (teamState.error) {
+      return null;
+    }
+
+    if (teamState.isLoading) {
+      return (
+        <div class="animate-pulse">
+          <div class="h-4 w-32 bg-(--color-skeleton) rounded"></div>
+        </div>
+      );
+    }
+
+    const creator = data.lookupUserMention(teamState.value.createdBy);
+    return creator ? creator.displayName : "Unknown";
+  }
 
   return () => {
     if (!state.isVisible || !props.team) return null;
@@ -105,6 +149,27 @@ export function TeamDrawer(props: TeamDrawerProps) {
                         {props.team.members.length !== 1 ? "s" : ""}
                       </p>
                     </div>
+
+                    {/* Team Info */}
+                    <div class="px-6 pb-6 space-y-4">
+                      <div>
+                        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Mission
+                        </dt>
+                        <dd class="mt-2 text-sm text-gray-900 dark:text-white">
+                          {renderMission()}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Created By
+                        </dt>
+                        <dd class="mt-2 text-sm text-gray-900 dark:text-white">
+                          {renderCreatedBy()}
+                        </dd>
+                      </div>
+                    </div>
+
                     <div class="px-6 pb-6">
                       <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3">
                         MEMBERS

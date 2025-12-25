@@ -43,6 +43,9 @@ export const FirebaseContext = createContext(() => {
         "messages"
       );
     },
+    users(organizationId: string) {
+      return collection(firestore, "organizations", organizationId, "users");
+    },
   };
 
   return { app, auth, firestore, collections };

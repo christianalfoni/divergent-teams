@@ -1,5 +1,6 @@
 import { useState, useEffect } from "rask-ui";
 import type { UserMention } from "@divergent-teams/shared";
+import { useUser } from "../hooks/useUser";
 
 type UserDrawerProps = {
   isOpen: boolean;
@@ -8,6 +9,7 @@ type UserDrawerProps = {
 };
 
 export function UserDrawer(props: UserDrawerProps) {
+  const userState = props.user ? useUser(props.user.userId) : null;
   const state = useState({
     isVisible: false,
     isAnimating: false,
@@ -30,6 +32,57 @@ export function UserDrawer(props: UserDrawerProps) {
       }, 500);
     }
   });
+
+  function renderJoinedAt() {
+    if (!userState) return null;
+
+    if (userState.error) {
+      return null;
+    }
+
+    if (userState.isLoading) {
+      return (
+        <div class="animate-pulse mt-2">
+          <div class="h-4 w-32 bg-(--color-skeleton) rounded mx-auto"></div>
+        </div>
+      );
+    }
+
+    return (
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Joined {userState.value.createdAt.toDate().toLocaleDateString()}
+      </p>
+    );
+  }
+
+  function renderEmail() {
+    if (!userState) return null;
+
+    if (userState.error) {
+      return (
+        <span class="text-red-600 dark:text-red-400">
+          {String(userState.error)}
+        </span>
+      );
+    }
+
+    if (userState.isLoading) {
+      return (
+        <div class="animate-pulse">
+          <div class="h-4 w-48 bg-(--color-skeleton) rounded"></div>
+        </div>
+      );
+    }
+
+    return (
+      <a
+        href={`mailto:${userState.value.email}`}
+        class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-mono"
+      >
+        {userState.value.email}
+      </a>
+    );
+  }
 
   return () => {
     if (!state.isVisible || !props.user) return null;
@@ -97,6 +150,19 @@ export function UserDrawer(props: UserDrawerProps) {
                       <h2 class="mt-3 font-semibold text-gray-900 dark:text-white">
                         {props.user.displayName}
                       </h2>
+                      {renderJoinedAt()}
+                    </div>
+
+                    {/* User Info */}
+                    <div class="mt-8 space-y-4">
+                      <div>
+                        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Email
+                        </dt>
+                        <dd class="mt-2 text-sm text-gray-900 dark:text-white">
+                          {renderEmail()}
+                        </dd>
+                      </div>
                     </div>
                   </div>
                 </div>
