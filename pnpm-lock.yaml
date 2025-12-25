@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@heroicons/react':
-        specifier: ^2.2.0
-        version: 2.2.0(react@19.2.3)
     devDependencies:
       typescript:
         specifier: ^5.7.3
@@ -28,8 +24,8 @@ importers:
         specifier: ^12.6.0
         version: 12.6.0
       rask-ui:
-        specifier: ^0.28.0
-        version: 0.28.0(vite@6.4.1(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2))
+        specifier: ^0.28.2
+        version: 0.28.2(vite@6.4.1(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2))
       tailwindcss:
         specifier: ^4.1.17
         version: 4.1.17
@@ -689,11 +685,6 @@ packages:
     resolution: {integrity: sha512-rc1hOQtjIWGxcxpb9aHAfLpIctjEnsDehj0DAiVfBlmT84uvR0uUtN2hEi/ecvWVjXUGf5qPF4qEgiLOx1YIMQ==}
     engines: {node: '>=6'}
     hasBin: true
-
-  '@heroicons/react@2.2.0':
-    resolution: {integrity: sha512-LMcepvRaS9LYHJGsF0zzmgKCUim/X3N/DQKc4jepAXJ7l8QxJ1PmxJzqplF2Z3FE4PqBAIGyJAQ/w4B5dsqbtQ==}
-    peerDependencies:
-      react: '>= 16 || ^19.0.0-rc'
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -2574,8 +2565,8 @@ packages:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
     engines: {node: '>= 0.6'}
 
-  rask-ui@0.28.0:
-    resolution: {integrity: sha512-1nx8q4Y9DBgNQEeh0GfmLLu93OqdU1+BEYBGtj0EIJiP+yjzYAsQK9P90UasPVDEI1P7ijak7A3KcEUZUSn6Pw==}
+  rask-ui@0.28.2:
+    resolution: {integrity: sha512-ewZsft446UM3rtxgTarxsZvSCXtNgffwHbvSWfR32/In+6C1+95nwFdBf/1wlCbfHJa1utcvi/l0OjscWXx95A==}
     peerDependencies:
       vite: '>=5.0.0'
     peerDependenciesMeta:
@@ -2588,10 +2579,6 @@ packages:
 
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
-
-  react@19.2.3:
-    resolution: {integrity: sha512-Ku/hhYbVjOQnXDZFv2+RibmLFGwFdeeKHFcOTlrt7xplBnya5OGn/hIRDsqDiSUcfORsDC7MPxwork8jBwsIWA==}
-    engines: {node: '>=0.10.0'}
 
   readable-stream@3.6.2:
     resolution: {integrity: sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA==}
@@ -3716,10 +3703,6 @@ snapshots:
       protobufjs: 7.5.4
       yargs: 17.7.2
     optional: true
-
-  '@heroicons/react@2.2.0(react@19.2.3)':
-    dependencies:
-      react: 19.2.3
 
   '@isaacs/cliui@8.0.2':
     dependencies:
@@ -5888,7 +5871,7 @@ snapshots:
 
   range-parser@1.2.1: {}
 
-  rask-ui@0.28.0(vite@6.4.1(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)):
+  rask-ui@0.28.2(vite@6.4.1(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)):
     dependencies:
       '@swc/core': 1.15.3
       inferno: 9.0.5
@@ -5908,8 +5891,6 @@ snapshots:
       unpipe: 1.0.0
 
   react-is@18.3.1: {}
-
-  react@19.2.3: {}
 
   readable-stream@3.6.2:
     dependencies:

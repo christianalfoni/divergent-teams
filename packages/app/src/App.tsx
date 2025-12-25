@@ -1,4 +1,4 @@
-import { useState } from "rask-ui";
+import { useMountEffect } from "rask-ui";
 import { AuthenticationContext } from "./contexts/AuthenticationContext";
 import { FirebaseContext } from "./contexts/FirebaseContext";
 import { ThemeContext } from "./contexts/ThemeContext";
@@ -9,26 +9,68 @@ import { AuthModal } from "./components/AuthModal";
 import { JSONStorageContext } from "./contexts/JSONStorageContext";
 import { SearchPaletteContext } from "./contexts/SearchPaletteContext";
 import { SearchPalette } from "./components/SearchPalette";
-import { CreateTeamDrawer } from "./components/CreateTeamDrawer";
+import { Drawer } from "./components/Drawer";
+import { BackdropContext } from "./contexts/BackdropContext";
+import { Backdrop } from "./components/Backdrop";
+import { DrawerContext } from "./contexts/DrawerContext";
 
 export function App() {
+  JSONStorageContext.inject("divergent-teams");
   FirebaseContext.inject();
   ThemeContext.inject();
-  SearchPaletteContext.inject();
-  JSONStorageContext.inject("divergent-teams");
+
   const authentication = AuthenticationContext.inject();
+
   DataContext.inject();
 
-  const openCreateTeamModal = () => {
-    state.showCreateTeamModal = true;
-  };
+  const backdrop = BackdropContext.inject();
+  const drawer = DrawerContext.inject();
+  const search = SearchPaletteContext.inject();
 
-  const closeCreateTeamModal = () => {
-    state.showCreateTeamModal = false;
-  };
+  // Handle CMD + K / CTRL + K keyboard shortcut
+  useMountEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        if (search.isOpen) {
+          search.close();
+          backdrop.close();
+        } else {
+          backdrop.open(() => {
+            search.close();
+            drawer.close();
+          });
+          search.open((mention) => {
+            if (!mention) {
+              backdrop.close();
+              return;
+            }
 
-  const state = useState({
-    showCreateTeamModal: false,
+            switch (mention.type) {
+              case "team": {
+                drawer.open({
+                  type: "team",
+                  team: mention,
+                });
+                break;
+              }
+              case "user": {
+                drawer.open({
+                  type: "user",
+                  user: mention,
+                });
+                break;
+              }
+            }
+          });
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   });
 
   return () => {
@@ -37,14 +79,12 @@ export function App() {
 
     return (
       <div class="min-h-screen bg-(--color-bg-primary) flex flex-col">
-        <TopBar onCreateTeam={openCreateTeamModal} />
+        <TopBar />
         <Calendar />
         {showAuthModal ? <AuthModal /> : null}
+        <Backdrop />
+        <Drawer />
         <SearchPalette />
-        <CreateTeamDrawer
-          isOpen={state.showCreateTeamModal}
-          onClose={closeCreateTeamModal}
-        />
       </div>
     );
   };

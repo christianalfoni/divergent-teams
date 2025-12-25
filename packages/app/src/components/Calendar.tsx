@@ -205,7 +205,7 @@ export function Calendar() {
                               onBlur={() => handleEditorBlur(index)}
                               availableTags={[]}
                               onMention={(api) => {
-                                searchPalette.openForMention((mention) => {
+                                searchPalette.open((mention) => {
                                   if (state.addingTodoDayIndex !== index) {
                                     return;
                                   }

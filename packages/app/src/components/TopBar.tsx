@@ -1,11 +1,10 @@
+import { DrawerContext } from "../contexts/DrawerContext";
 import { UserGroupIcon } from "./icons/UserGroupIcon";
 
-type Props = {
-  onCreateTeam: () => void;
-};
+export function TopBar() {
+  const drawer = DrawerContext.use();
 
-export function TopBar(props: Props) {
-  return (
+  return () => (
     <nav class="border-b bg-(--color-bg-nav) border-(--color-border-primary)">
       <div class="px-4">
         <div class="relative flex h-16 justify-between">
@@ -19,7 +18,7 @@ export function TopBar(props: Props) {
 
           <div class="hidden sm:ml-6 sm:flex sm:items-center gap-3">
             <button
-              onClick={props.onCreateTeam}
+              onClick={() => drawer.open({ type: "createTeam" })}
               class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
             >
               <div class="w-4 h-4">
