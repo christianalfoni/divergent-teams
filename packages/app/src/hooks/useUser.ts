@@ -1,13 +1,13 @@
-import { useAsync } from "rask-ui";
 import { FirebaseContext } from "../contexts/FirebaseContext";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, Timestamp } from "firebase/firestore";
 import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import type { User } from "@divergent-teams/shared";
+import { useCache } from "./useCache";
 
 export function useUser(userId: string) {
   const authentication = AuthenticationContext.use();
   const firebase = FirebaseContext.use();
-  const [userState] = useAsync(async () => {
+  const userState = useCache(userId, async () => {
     if (!authentication.user) {
       throw new Error("No user authenticated");
     }

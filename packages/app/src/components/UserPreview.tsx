@@ -44,7 +44,7 @@ export function UserPreview(props: Props) {
       return null;
     }
 
-    if (userState.isLoading) {
+    if (!userState.cachedValue) {
       return (
         <div className="animate-pulse mt-1">
           <div className="h-4 w-32 bg-(--color-skeleton) rounded"></div>
@@ -52,7 +52,9 @@ export function UserPreview(props: Props) {
       );
     }
 
-    return `Joined ${userState.value.createdAt.toDate().toLocaleDateString()}`;
+    return `Joined ${userState.cachedValue.createdAt
+      .toDate()
+      .toLocaleDateString()}`;
   }
 
   function renderEmail() {
@@ -60,7 +62,7 @@ export function UserPreview(props: Props) {
       return String(userState.error);
     }
 
-    if (userState.isLoading) {
+    if (!userState.cachedValue) {
       return (
         <p className="text-sm text-gray-500 dark:text-gray-400">
           <div className="animate-pulse mt-1">
@@ -73,10 +75,10 @@ export function UserPreview(props: Props) {
     return (
       <p className="text-sm text-gray-500 dark:text-gray-400">
         <a
-          href={`mailto:${userState.value.email}`}
+          href={`mailto:${userState.cachedValue.email}`}
           className="text-sm/6 font-semibold text-indigo-600 dark:text-indigo-400"
         >
-          {userState.value.email}
+          {userState.cachedValue.email}
         </a>
       </p>
     );

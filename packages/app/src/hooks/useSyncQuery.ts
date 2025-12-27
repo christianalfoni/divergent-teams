@@ -32,7 +32,6 @@ export function useSyncQuery<T extends { id: string }>(
       collection,
       (snapshot) => {
         state.isLoading = false;
-        console.log("WTF", snapshot.docs);
         snapshot.docChanges().forEach((docChange) => {
           const data = docChange.doc.data() as T;
           const item = state.data.find((item) => item.id === docChange.doc.id);

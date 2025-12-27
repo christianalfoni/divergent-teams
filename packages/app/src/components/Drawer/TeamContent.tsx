@@ -2,6 +2,10 @@ import type { TeamMention } from "@divergent-teams/shared";
 import { DataContext } from "../../contexts/DataContext";
 import { UserGroupIcon } from "../icons/UserGroupIcon";
 import { useTeam } from "../../hooks/useTeam";
+import { useTasks } from "../../hooks/useTasks";
+import { useAddTask } from "../../hooks/useAddTask";
+import { SmartEditor, type SmartEditorApi, RichTextDisplay } from "../SmartEditor";
+import { useState, useRef } from "rask-ui";
 
 type TeamContentProps = {
   team: TeamMention;
@@ -11,6 +15,13 @@ type TeamContentProps = {
 export function TeamContent(props: TeamContentProps) {
   const data = DataContext.use();
   const teamState = useTeam(props.team.id);
+  const tasksState = useTasks(props.team.id);
+  const addTask = useAddTask();
+  const editorRef = useRef<SmartEditorApi>();
+
+  const state = useState({
+    isAddingTask: false,
+  });
 
   function renderMission() {
     if (teamState.error) {
@@ -50,15 +61,30 @@ export function TeamContent(props: TeamContentProps) {
     return creator ? creator.displayName : "Unknown";
   }
 
+  function handleAddTaskClick(e: Rask.MouseEvent) {
+    e.stopPropagation();
+    state.isAddingTask = true;
+    setTimeout(() => editorRef.current?.focus(), 0);
+  }
+
   return () => (
     <div class="relative flex h-full flex-col overflow-y-auto bg-white shadow-xl dark:bg-gray-800 dark:after:absolute dark:after:inset-y-0 dark:after:left-0 dark:after:w-px dark:after:bg-white/10">
       {/* Header */}
       <div class="bg-gray-50 px-4 py-6 sm:px-6 dark:bg-gray-800/50">
         <div class="flex items-start justify-between space-x-3">
-          <div class="space-y-1">
-            <h3 class="text-base font-semibold text-gray-900 dark:text-white">
-              Team Profile
-            </h3>
+          <div class="flex items-center space-x-3">
+            <div class="w-12 h-12 flex-none text-gray-600 dark:text-gray-400">
+              <UserGroupIcon />
+            </div>
+            <div>
+              <h3 class="text-base font-semibold text-gray-900 dark:text-white">
+                {props.team.name}
+              </h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                {props.team.members.length} member
+                {props.team.members.length !== 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
           <div class="flex h-7 items-center">
             <button
@@ -89,21 +115,8 @@ export function TeamContent(props: TeamContentProps) {
 
       {/* Content */}
       <div class="flex-1">
-        <div class="p-6 text-center">
-          <div class="mx-auto w-16 h-16 text-gray-600 dark:text-gray-400">
-            <UserGroupIcon />
-          </div>
-          <h2 class="mt-3 font-semibold text-gray-900 dark:text-white">
-            {props.team.name}
-          </h2>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {props.team.members.length} member
-            {props.team.members.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-
         {/* Team Info */}
-        <div class="px-6 pb-6 space-y-4">
+        <div class="p-6 space-y-4">
           <div>
             <dt class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Mission
@@ -145,6 +158,79 @@ export function TeamContent(props: TeamContentProps) {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        <div class="px-6 pb-6">
+          <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3">
+            TASKS
+          </h3>
+          <div class="space-y-2">
+            {tasksState.isLoading ? (
+              <div class="animate-pulse space-y-2">
+                <div class="h-4 w-full bg-(--color-skeleton) rounded"></div>
+                <div class="h-4 w-3/4 bg-(--color-skeleton) rounded"></div>
+              </div>
+            ) : (
+              <>
+                {tasksState.data.map((task) => (
+                  <div
+                    key={task.id}
+                    class="p-2 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                  >
+                    <RichTextDisplay value={task.description} />
+                  </div>
+                ))}
+
+                {!state.isAddingTask && (
+                  <button
+                    onClick={handleAddTaskClick}
+                    class="px-2 py-2 flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors w-full"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      stroke="currentColor"
+                      class="w-4 h-4"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 4.5v15m7.5-7.5h-15"
+                      />
+                    </svg>
+                    <span class="text-sm">Add task...</span>
+                  </button>
+                )}
+
+                {state.isAddingTask && (
+                  <div class="p-2 text-(--color-text-primary)">
+                    <SmartEditor
+                      apiRef={editorRef}
+                      initialValue={{ resources: [], text: "" }}
+                      onSubmit={(richText) => {
+                        editorRef.current?.clear();
+                        state.isAddingTask = false;
+
+                        if (richText.text) {
+                          addTask.add({
+                            teamId: props.team.id,
+                            description: richText,
+                          });
+                        }
+                      }}
+                      onBlur={() => {
+                        state.isAddingTask = false;
+                      }}
+                      placeholder="Task description..."
+                      focus={true}
+                    />
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>

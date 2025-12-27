@@ -13,11 +13,13 @@ import { Drawer } from "./components/Drawer";
 import { BackdropContext } from "./contexts/BackdropContext";
 import { Backdrop } from "./components/Backdrop";
 import { DrawerContext } from "./contexts/DrawerContext";
+import { CacheContext } from "./contexts/CacheContext";
 
 export function App() {
   JSONStorageContext.inject("divergent-teams");
   FirebaseContext.inject();
   ThemeContext.inject();
+  CacheContext.inject();
 
   const authentication = AuthenticationContext.inject();
 
@@ -28,13 +30,33 @@ export function App() {
   const search = SearchPaletteContext.inject();
 
   // Handle CMD + K / CTRL + K keyboard shortcut
-  useMountEffect(() => {
+  useMountEffect(registerSearchPaletteShortcut);
+
+  return () => {
+    const showAuthModal =
+      !authentication.isAuthenticating && !authentication.user;
+
+    return (
+      <div class="min-h-screen bg-(--color-bg-primary) flex flex-col">
+        <TopBar />
+        <Calendar />
+        {showAuthModal ? <AuthModal /> : null}
+        <Backdrop />
+        <Drawer />
+        <SearchPalette />
+      </div>
+    );
+  };
+
+  function registerSearchPaletteShortcut() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         if (search.isOpen) {
           search.close();
-          backdrop.close();
+          if (!drawer.isOpen) {
+            backdrop.close();
+          }
         } else {
           backdrop.open(() => {
             search.close();
@@ -68,24 +90,9 @@ export function App() {
     };
 
     window.addEventListener("keydown", handleKeyDown);
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  });
-
-  return () => {
-    const showAuthModal =
-      !authentication.isAuthenticating && !authentication.user;
-
-    return (
-      <div class="min-h-screen bg-(--color-bg-primary) flex flex-col">
-        <TopBar />
-        <Calendar />
-        {showAuthModal ? <AuthModal /> : null}
-        <Backdrop />
-        <Drawer />
-        <SearchPalette />
-      </div>
-    );
-  };
+  }
 }
