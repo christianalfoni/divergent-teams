@@ -67,7 +67,7 @@ function richTextToHtml(data: RichText, lookups: LookupFunctions): string {
         break;
       case "team":
         const teamName = lookups.lookupTeam(entity.teamId) || "Unknown Team";
-        replacement = `<span data-team="${entity.teamId}" contenteditable="false" class="mention-person">${teamName}</span>`;
+        replacement = `<span data-team="${entity.teamId}" contenteditable="false" class="mention-team">${teamName}</span>`;
         break;
       case "task":
         const taskTitle = lookups.lookupTask(entity.taskId) || "Unknown Task";
@@ -213,7 +213,7 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
           return (
             <span
               key={i}
-              className="mention-person"
+              className="mention-team"
               onClick={() => props.onTeamClick?.(entity.teamId)}
               style={{ cursor: props.onTeamClick ? "pointer" : "default" }}
             >
@@ -416,7 +416,7 @@ export function SmartEditor(props: SmartEditorProps) {
       case "team":
         span.setAttribute("data-team", mention.id);
         span.textContent = mention.name;
-        span.className = "mention-person";
+        span.className = "mention-team";
         break;
       case "task":
         span.setAttribute("data-task", mention.taskId);
