@@ -1,9 +1,8 @@
 export type Resource =
   | { type: "tag"; tag: string }
-  | { type: "user"; userId: string; display: string }
-  | { type: "team"; teamId: string; display: string }
-  | { type: "project"; projectId: string; display: string }
-  | { type: "issue"; issueId: string; display: string }
+  | { type: "user"; userId: string }
+  | { type: "team"; teamId: string }
+  | { type: "task"; taskId: string }
   | { type: "link"; url: string; display: string };
 
 export type RichText = {

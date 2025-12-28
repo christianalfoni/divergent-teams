@@ -102,3 +102,51 @@ export const onTeamUpdate = onDocumentWritten(
     );
   }
 );
+
+/**
+ * onDocumentWritten trigger for tasks
+ * Syncs task changes to the mentions collection
+ */
+export const onTaskUpdate = onDocumentWritten(
+  {
+    document: "organizations/{orgId}/tasks/{taskId}",
+    region: "us-central1",
+  },
+  async (event) => {
+    // Guard clause for event data
+    if (!event.data) {
+      return;
+    }
+
+    // Capture the Org ID, Team ID, and Task ID from the path
+    const orgId = event.params.orgId as string;
+    const taskId = event.params.taskId as string;
+
+    const newData = event.data.after.exists ? event.data.after.data() : null;
+
+    // Reference the mention document inside the specific organization
+    const mentionRef = db
+      .collection("organizations")
+      .doc(orgId)
+      .collection("mentions")
+      .doc(taskId);
+
+    // If task was deleted, delete the mention
+    if (!newData) {
+      await mentionRef.delete();
+      return;
+    }
+
+    // Create/update the mention with task info
+    await mentionRef.set(
+      {
+        type: "task",
+        taskId: taskId,
+        title: newData?.title,
+        teamId: newData?.teamId,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+);

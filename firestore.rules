@@ -86,6 +86,27 @@ service cloud.firestore {
       allow update, delete: if isOrgMember() && isOwner();
     }
 
+    // Rules for tasks within an organization
+    match /organizations/{organizationId}/tasks/{taskId} {
+
+      // Helper function to check if user belongs to the organization
+      function isOrgMember() {
+        return request.auth != null
+          && request.auth.token.organizationId == organizationId;
+      }
+
+      // Helper function to check if user is creating with themselves as creator
+      function isCreatingAsCreator() {
+        return request.resource.data.createdBy == request.auth.uid;
+      }
+
+      // Allow read/write if user is org member
+      allow read, update, delete: if isOrgMember();
+
+      // Allow create if user is org member and setting themselves as creator
+      allow create: if isOrgMember() && isCreatingAsCreator();
+    }
+
     // Rules for conversations within an organization
     match /organizations/{organizationId}/conversations/{conversationId} {
 

@@ -1,6 +1,7 @@
 import { assignRef, useMountEffect, useRef, type Ref } from "rask-ui";
 import type { Mention } from "@divergent-teams/shared";
 import type { Resource, RichText } from "@divergent-teams/shared";
+import { DataContext } from "../contexts/DataContext";
 
 // Re-export for backwards compatibility
 export type { Resource, RichText };
@@ -23,8 +24,7 @@ type RichTextDisplayProps = {
   value: RichText;
   onUserClick?: (userId: string) => void;
   onTeamClick?: (teamId: string) => void;
-  onProjectClick?: (projectId: string) => void;
-  onIssueClick?: (issueId: string) => void;
+  onTaskClick?: (taskId: string) => void;
 };
 
 export type SmartEditorApi = {
@@ -39,8 +39,14 @@ export type SmartEditorApi = {
 const URL_REGEX = /^(https?:\/\/)?([\w.-]+)(:\d+)?(\/[^\s]*)?$/i;
 const TAG_REGEX = /^#(\w+)$/;
 
+type LookupFunctions = {
+  lookupUser: (userId: string) => string | undefined;
+  lookupTeam: (teamId: string) => string | undefined;
+  lookupTask: (taskId: string) => string | undefined;
+};
+
 // Convert RichText -> HTML (for editing mode)
-function richTextToHtml(data: RichText): string {
+function richTextToHtml(data: RichText, lookups: LookupFunctions): string {
   let html = data.text;
 
   data.resources.forEach((entity, i) => {
@@ -56,16 +62,16 @@ function richTextToHtml(data: RichText): string {
         replacement = `<span data-url="${entity.url}" contenteditable="false" class="smartlink-chip">${entity.display}</span>`;
         break;
       case "user":
-        replacement = `<span data-user="${entity.userId}" contenteditable="false" class="mention-person">${entity.display}</span>`;
+        const userName = lookups.lookupUser(entity.userId) || "Unknown User";
+        replacement = `<span data-user="${entity.userId}" contenteditable="false" class="mention-person">${userName}</span>`;
         break;
       case "team":
-        replacement = `<span data-team="${entity.teamId}" contenteditable="false" class="mention-person">${entity.display}</span>`;
+        const teamName = lookups.lookupTeam(entity.teamId) || "Unknown Team";
+        replacement = `<span data-team="${entity.teamId}" contenteditable="false" class="mention-person">${teamName}</span>`;
         break;
-      case "project":
-        replacement = `<span data-project="${entity.projectId}" contenteditable="false" class="mention-project">${entity.display}</span>`;
-        break;
-      case "issue":
-        replacement = `<span data-issue="${entity.issueId}" contenteditable="false" class="mention-issue">#${entity.display}</span>`;
+      case "task":
+        const taskTitle = lookups.lookupTask(entity.taskId) || "Unknown Task";
+        replacement = `<span data-task="${entity.taskId}" contenteditable="false" class="mention-task">${taskTitle}</span>`;
         break;
     }
 
@@ -84,7 +90,7 @@ function htmlToRichText(html: string): RichText {
   // Replace tags (match data-tag anywhere in the tag)
   text = text.replace(
     /<span\b[^>]*\bdata-tag="([^"]+)"[^>]*>([^<]*)<\/span>/g,
-    (match, tag) => {
+    (_match, tag) => {
       entities.push({ type: "tag", tag });
       return `[[${index++}]]`;
     }
@@ -93,7 +99,7 @@ function htmlToRichText(html: string): RichText {
   // Replace links (match data-url anywhere in the tag)
   text = text.replace(
     /<span\b[^>]*\bdata-url="([^"]+)"[^>]*>([^<]*)<\/span>/g,
-    (match, url, display) => {
+    (_match, url, display) => {
       entities.push({ type: "link", url, display });
       return `[[${index++}]]`;
     }
@@ -102,8 +108,8 @@ function htmlToRichText(html: string): RichText {
   // Replace user mentions (match data-user anywhere in the tag)
   text = text.replace(
     /<span\b[^>]*\bdata-user="([^"]+)"[^>]*>([^<]*)<\/span>/g,
-    (match, userId, display) => {
-      entities.push({ type: "user", userId, display });
+    (_match, userId) => {
+      entities.push({ type: "user", userId });
       return `[[${index++}]]`;
     }
   );
@@ -111,26 +117,17 @@ function htmlToRichText(html: string): RichText {
   // Replace team mentions (match data-team anywhere in the tag)
   text = text.replace(
     /<span\b[^>]*\bdata-team="([^"]+)"[^>]*>([^<]*)<\/span>/g,
-    (match, teamId, display) => {
-      entities.push({ type: "team", teamId, display });
+    (_match, teamId) => {
+      entities.push({ type: "team", teamId });
       return `[[${index++}]]`;
     }
   );
 
-  // Replace project mentions (match data-project anywhere in the tag)
+  // Replace task mentions (match data-task anywhere in the tag)
   text = text.replace(
-    /<span\b[^>]*\bdata-project="([^"]+)"[^>]*>([^<]*)<\/span>/g,
-    (match, projectId, display) => {
-      entities.push({ type: "project", projectId, display });
-      return `[[${index++}]]`;
-    }
-  );
-
-  // Replace issue mentions (match data-issue anywhere in the tag)
-  text = text.replace(
-    /<span\b[^>]*\bdata-issue="([^"]+)"[^>]*>#([^<]*)<\/span>/g,
-    (match, issueId, display) => {
-      entities.push({ type: "issue", issueId, display });
+    /<span\b[^>]*\bdata-task="([^"]+)"[^>]*>([^<]*)<\/span>/g,
+    (_match, taskId) => {
+      entities.push({ type: "task", taskId });
       return `[[${index++}]]`;
     }
   );
@@ -144,6 +141,24 @@ function htmlToRichText(html: string): RichText {
 
 // RichTextDisplay Component - For displaying rich text (view only)
 export function RichTextDisplay(props: RichTextDisplayProps) {
+  const data = DataContext.use();
+
+  // Create lookup functions
+  const lookupUser = (userId: string) => {
+    const user = data.mentions.users.find((u) => u.userId === userId);
+    return user?.displayName;
+  };
+
+  const lookupTeam = (teamId: string) => {
+    const team = data.mentions.teams.find((t) => t.id === teamId);
+    return team?.name;
+  };
+
+  const lookupTask = (taskId: string) => {
+    const task = data.mentions.tasks.find((t) => t.taskId === taskId);
+    return task?.title;
+  };
+
   const parts = props.value.text.split(/(\[\[\d+\]\])/g);
 
   const content = parts.map((part, i) => {
@@ -181,6 +196,7 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
           );
 
         case "user":
+          const userName = lookupUser(entity.userId) || "Unknown User";
           return (
             <span
               key={i}
@@ -188,11 +204,12 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
               onClick={() => props.onUserClick?.(entity.userId)}
               style={{ cursor: props.onUserClick ? "pointer" : "default" }}
             >
-              {entity.display}
+              {userName}
             </span>
           );
 
         case "team":
+          const teamName = lookupTeam(entity.teamId) || "Unknown Team";
           return (
             <span
               key={i}
@@ -200,31 +217,20 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
               onClick={() => props.onTeamClick?.(entity.teamId)}
               style={{ cursor: props.onTeamClick ? "pointer" : "default" }}
             >
-              {entity.display}
+              {teamName}
             </span>
           );
 
-        case "project":
+        case "task":
+          const taskTitle = lookupTask(entity.taskId) || "Unknown Task";
           return (
             <span
               key={i}
-              className="mention-project"
-              onClick={() => props.onProjectClick?.(entity.projectId)}
-              style={{ cursor: props.onProjectClick ? "pointer" : "default" }}
+              className="mention-task"
+              onClick={() => props.onTaskClick?.(entity.taskId)}
+              style={{ cursor: props.onTaskClick ? "pointer" : "default" }}
             >
-              {entity.display}
-            </span>
-          );
-
-        case "issue":
-          return (
-            <span
-              key={i}
-              className="mention-issue"
-              onClick={() => props.onIssueClick?.(entity.issueId)}
-              style={{ cursor: props.onIssueClick ? "pointer" : "default" }}
-            >
-              #{entity.display}
+              {taskTitle}
             </span>
           );
       }
@@ -238,9 +244,26 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
 
 // SmartEditor Component - For editing rich text
 export function SmartEditor(props: SmartEditorProps) {
+  const data = DataContext.use();
   const ref = useRef<HTMLDivElement>();
   let isInitialMount = true;
   let mentioningRange = null as Range | null; // Track if we're in mention mode to prevent premature submit
+
+  // Create lookup functions
+  const lookups: LookupFunctions = {
+    lookupUser: (userId: string) => {
+      const user = data.mentions.users.find((u) => u.userId === userId);
+      return user?.displayName;
+    },
+    lookupTeam: (teamId: string) => {
+      const team = data.mentions.teams.find((t) => t.id === teamId);
+      return team?.name;
+    },
+    lookupTask: (taskId: string) => {
+      const task = data.mentions.tasks.find((t) => t.taskId === taskId);
+      return task?.title;
+    },
+  };
 
   const api: SmartEditorApi = {
     clear: () => {
@@ -253,7 +276,7 @@ export function SmartEditor(props: SmartEditorProps) {
     },
     setValue: (value: RichText) => {
       if (ref.current) {
-        ref.current.innerHTML = richTextToHtml(value);
+        ref.current.innerHTML = richTextToHtml(value, lookups);
       }
     },
     getValue: () => {
@@ -307,7 +330,7 @@ export function SmartEditor(props: SmartEditorProps) {
 
     // Set innerHTML on initial mount
     if (isInitialMount) {
-      if (props.initialValue) el.innerHTML = richTextToHtml(props.initialValue);
+      if (props.initialValue) el.innerHTML = richTextToHtml(props.initialValue, lookups);
       isInitialMount = false;
     }
 
@@ -379,7 +402,7 @@ export function SmartEditor(props: SmartEditorProps) {
     return pill;
   }
 
-  // Create mention span for user/team
+  // Create mention span for user/team/task
   function makeMentionSpan(mention: Mention) {
     const span = document.createElement("span");
     span.setAttribute("contenteditable", "false");
@@ -394,6 +417,11 @@ export function SmartEditor(props: SmartEditorProps) {
         span.setAttribute("data-team", mention.id);
         span.textContent = mention.name;
         span.className = "mention-person";
+        break;
+      case "task":
+        span.setAttribute("data-task", mention.taskId);
+        span.textContent = mention.title;
+        span.className = "mention-task";
         break;
     }
 

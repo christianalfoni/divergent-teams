@@ -10,7 +10,7 @@ export function useAddTask() {
   const authentication = AuthenticationContext.use();
 
   const [state, add] = useAction(
-    async (params: { teamId: string; description: RichText }) => {
+    async (params: { teamId: string; title: string; details?: RichText }) => {
       if (!authentication.user) {
         throw new Error("You are not authenticated");
       }
@@ -21,7 +21,10 @@ export function useAddTask() {
       const task: Task = {
         id: newTaskDoc.id,
         teamId: params.teamId,
-        description: params.description,
+        title: params.title,
+        details: params.details,
+        completedTodosCount: 0,
+        totalTodosCount: 0,
         createdBy: authentication.user.id,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
@@ -29,11 +32,18 @@ export function useAddTask() {
 
       const { id: _, ...taskData } = task;
 
-      await setDoc(newTaskDoc, {
+      // Remove undefined details field if not provided
+      const dataToSave: Record<string, any> = {
         ...taskData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+      };
+
+      if (params.details === undefined) {
+        delete dataToSave.details;
+      }
+
+      await setDoc(newTaskDoc, dataToSave);
 
       return task;
     }

@@ -5,6 +5,7 @@ import type {
   Todo,
   UserMention,
   TeamMention,
+  TaskMention,
 } from "@divergent-teams/shared";
 import { AuthenticationContext } from "./AuthenticationContext";
 import { useSyncQuery } from "../hooks/useSyncQuery";
@@ -52,22 +53,30 @@ export const DataContext = createContext(() => {
     isLoading: () => todos.isLoading || mentions.isLoading,
     todos: () => todos.data,
     mentions: () =>
-      mentions.data.reduce<{ users: UserMention[]; teams: TeamMention[] }>(
+      mentions.data.reduce<{
+        users: UserMention[];
+        teams: TeamMention[];
+        tasks: TaskMention[];
+      }>(
         (aggr, mention) => {
           if (mention.type === "user") {
             aggr.users.push(mention);
           } else if (mention.type === "team") {
             aggr.teams.push(mention);
+          } else if (mention.type === "task") {
+            aggr.tasks.push(mention);
           }
           return aggr;
         },
         {
           users: [],
           teams: [],
+          tasks: [],
         }
       ),
   });
   const lookupUserMention = useLookup(() => derived.mentions.users, "userId");
+  const lookupTaskMention = useLookup(() => derived.mentions.tasks, "taskId");
 
-  return useView(derived, { lookupUserMention });
+  return useView(derived, { lookupUserMention, lookupTaskMention });
 });

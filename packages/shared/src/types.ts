@@ -18,7 +18,14 @@ export type TeamMention = BaseMention & {
   members: string[];
 };
 
-export type Mention = UserMention | TeamMention;
+export type TaskMention = BaseMention & {
+  type: "task";
+  taskId: string;
+  title: string;
+  teamId: string;
+};
+
+export type Mention = UserMention | TeamMention | TaskMention;
 
 export interface Conversation {
   id: string;
@@ -35,13 +42,6 @@ export interface Message {
     resources: Resource[];
   };
   createdAt: Timestamp;
-}
-
-export interface Issue {
-  id: string;
-  title: string;
-  createdBy: string;
-  description: string;
 }
 
 export interface Organization {
@@ -80,4 +80,16 @@ export interface Todo {
   completedAt?: Timestamp; // When the todo was marked complete
   completedWithTimeBox?: boolean; // Whether completed during a time-boxed session
   conversationId?: string;
+}
+
+export interface Task {
+  id: string;
+  teamId: string;
+  title: string;
+  details?: RichText;
+  totalTodosCount: number; // Total todos referencing this task
+  completedTodosCount: number; // Completed todos referencing this task
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }

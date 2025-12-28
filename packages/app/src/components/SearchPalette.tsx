@@ -5,6 +5,8 @@ import type { Mention } from "@divergent-teams/shared";
 import { UserGroupIcon } from "./icons/UserGroupIcon";
 import { UserPreview } from "./UserPreview";
 import { TeamPreview } from "./TeamPreview";
+import { TaskPreview } from "./TaskPreview";
+import { DocumentCheckIcon } from "./icons/DocumentCheckIcon";
 
 export function SearchPalette() {
   const searchPalette = SearchPaletteContext.use();
@@ -16,7 +18,11 @@ export function SearchPalette() {
   });
   const derived = useDerived({
     filteredMentions: () => {
-      const allMentions = [...data.mentions.users, ...data.mentions.teams];
+      const allMentions = [
+        ...data.mentions.users,
+        ...data.mentions.teams,
+        ...data.mentions.tasks,
+      ];
       if (state.query === "") {
         return allMentions;
       }
@@ -26,6 +32,8 @@ export function SearchPalette() {
           return item.displayName.toLowerCase().includes(searchTerm);
         } else if (item.type === "team") {
           return item.name.toLowerCase().includes(searchTerm);
+        } else if (item.type === "task") {
+          return item.title.toLowerCase().includes(searchTerm);
         }
         return false;
       });
@@ -96,7 +104,7 @@ export function SearchPalette() {
                   ref={inputRef}
                   type="text"
                   className="w-full h-12 pl-11 pr-4 text-base text-gray-900 dark:text-white bg-transparent outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                  placeholder="Search people & teams..."
+                  placeholder="Search people, teams & tasks..."
                   value={state.query}
                   onInput={(e) => {
                     state.query = (e.target as HTMLInputElement).value;
@@ -130,7 +138,7 @@ export function SearchPalette() {
                   >
                     {state.query === "" && (
                       <h2 className="mt-2 mb-4 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                        People & Teams
+                        People, Teams & Tasks
                       </h2>
                     )}
                     <div className="-mx-2 text-sm text-gray-700 dark:text-gray-300">
@@ -149,15 +157,19 @@ export function SearchPalette() {
                             <div className="w-6 h-6 flex-none rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-medium">
                               {item.displayName.charAt(0)}
                             </div>
-                          ) : (
+                          ) : item.type === "team" ? (
                             <div className="w-6 h-6 flex-none text-gray-600 dark:text-gray-400">
                               <UserGroupIcon />
                             </div>
+                          ) : (
+                            <DocumentCheckIcon className="w-6 h-6 flex-none text-green-600 dark:text-green-400" />
                           )}
                           <span className="ml-3 flex-auto truncate">
                             {item.type === "user"
                               ? item.displayName
-                              : item.name}
+                              : item.type === "team"
+                              ? item.name
+                              : item.title}
                           </span>
                           {selectedIndex === index && (
                             <svg
@@ -187,10 +199,15 @@ export function SearchPalette() {
                           key={state.activeItem.id}
                           user={state.activeItem}
                         />
-                      ) : (
+                      ) : state.activeItem.type === "team" ? (
                         <TeamPreview
                           key={state.activeItem.id}
                           team={state.activeItem}
+                        />
+                      ) : (
+                        <TaskPreview
+                          key={state.activeItem.id}
+                          task={state.activeItem}
                         />
                       )}
                     </div>

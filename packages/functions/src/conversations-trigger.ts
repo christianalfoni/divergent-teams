@@ -21,17 +21,14 @@ const ResourceSchema = z.union([
   z.object({
     type: z.literal("user"),
     userId: z.string(),
-    display: z.string(),
   }),
   z.object({
-    type: z.literal("project"),
-    projectId: z.string(),
-    display: z.string(),
+    type: z.literal("team"),
+    teamId: z.string(),
   }),
   z.object({
-    type: z.literal("issue"),
-    issueId: z.string(),
-    display: z.string(),
+    type: z.literal("task"),
+    taskId: z.string(),
   }),
   z.object({
     type: z.literal("link"),
