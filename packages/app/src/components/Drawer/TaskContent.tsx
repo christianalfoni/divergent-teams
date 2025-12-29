@@ -149,20 +149,8 @@ export function TaskContent(props: TaskContentProps) {
         <div class="bg-gray-50 px-4 py-6 sm:px-6 dark:bg-gray-800/50">
           <div class="flex items-start justify-between space-x-3">
             <div class="flex items-center space-x-3">
-              <div class="w-12 h-12 flex-none rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
-                <svg
-                  class="w-7 h-7"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+              <div class="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 text-lg font-semibold">
+                {props.task.title.charAt(0)}
               </div>
               <div>
                 <h3 class="text-base font-semibold text-gray-900 dark:text-white">

@@ -1,4 +1,4 @@
-export function UserGroupIcon() {
+export function UserGroupIcon(props: Rask.ElementProps<"svg">) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -6,7 +6,7 @@ export function UserGroupIcon() {
       viewBox="0 0 24 24"
       strokeWidth={1.5}
       stroke="currentColor"
-      className="size-6"
+      {...props}
     >
       <path
         strokeLinecap="round"

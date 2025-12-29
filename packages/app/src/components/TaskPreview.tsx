@@ -1,6 +1,5 @@
 import type { TaskMention } from "@divergent-teams/shared";
 import { DataContext } from "../contexts/DataContext";
-import { DocumentCheckIcon } from "./icons/DocumentCheckIcon";
 
 type Props = {
   task: TaskMention;
@@ -17,7 +16,9 @@ export function TaskPreview(props: Props) {
       <div className="flex flex-col p-6">
         {/* Task Header */}
         <div className="flex items-center gap-3 mb-4">
-          <DocumentCheckIcon className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400" />
+          <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 text-lg font-semibold">
+            {props.task.title.charAt(0)}
+          </div>
 
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-semibold text-gray-900 dark:text-white">

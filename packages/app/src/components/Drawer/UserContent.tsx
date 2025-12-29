@@ -10,12 +10,12 @@ export function UserContent(props: UserContentProps) {
   const userState = useUser(props.user.userId);
 
   return () => (
-    <div class="relative flex h-full flex-col overflow-y-auto bg-white shadow-xl dark:bg-gray-800 dark:after:absolute dark:after:inset-y-0 dark:after:left-0 dark:after:w-px dark:after:bg-white/10">
+    <div class="relative flex h-full flex-col overflow-y-auto bg-white shadow-xl dark:bg-gray-800 dark:after:absolute dark:after:inset-y-0 dark:after:left-0 dark:after:w-px dark:after:bg-white/10" style={{ width: "448px" }}>
       {/* Header */}
       <div class="bg-gray-50 px-4 py-6 sm:px-6 dark:bg-gray-800/50">
         <div class="flex items-start justify-between space-x-3">
           <div class="flex items-center space-x-3">
-            <div class="w-12 h-12 flex-none rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-medium text-lg">
+            <div class="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-700 dark:text-yellow-400 text-lg font-semibold">
               {props.user.displayName.charAt(0)}
             </div>
             <div>

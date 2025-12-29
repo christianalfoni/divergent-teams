@@ -33,7 +33,7 @@ export function Drawer() {
     return (
       <div class="pointer-events-none fixed inset-y-0 right-0 z-50 flex max-w-full pl-10 sm:pl-16">
         <div
-          class={`pointer-events-auto w-screen transform transition-all duration-500 ease-in-out ${getTranslateX()} ${getMaxWidth()}`}
+          class={`pointer-events-auto w-screen transform transition-transform duration-500 ease-in-out ${getTranslateX()} ${getMaxWidth()}`}
         >
           {renderContent()}
         </div>

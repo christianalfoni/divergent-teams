@@ -1,7 +1,6 @@
 import type { TeamMention } from "@divergent-teams/shared";
 import { DataContext } from "../../contexts/DataContext";
 import { DrawerContext } from "../../contexts/DrawerContext";
-import { UserGroupIcon } from "../icons/UserGroupIcon";
 import { useTeam } from "../../hooks/useTeam";
 import { useTasks } from "../../hooks/useTasks";
 import { useAddTask } from "../../hooks/useAddTask";
@@ -91,14 +90,10 @@ export function TeamContent(props: TeamContentProps) {
     state.isAddingTask = false;
 
     if (title) {
-      addTask
-        .add({
-          teamId: props.team.id,
-          title: title,
-        })
-        .catch((error) => {
-          console.error("Failed to add task:", error);
-        });
+      addTask.add({
+        teamId: props.team.id,
+        title: title,
+      });
     }
   }
 
@@ -110,15 +105,15 @@ export function TeamContent(props: TeamContentProps) {
   }
 
   return () => (
-    <div class="relative flex h-full flex-col overflow-y-auto bg-white shadow-xl dark:bg-gray-800 dark:after:absolute dark:after:inset-y-0 dark:after:left-0 dark:after:w-px dark:after:bg-white/10">
+    <div class="relative flex h-full flex-col overflow-y-auto bg-white shadow-xl dark:bg-gray-800 dark:after:absolute dark:after:inset-y-0 dark:after:left-0 dark:after:w-px dark:after:bg-white/10" style={{ width: "448px" }}>
       {/* Main content area */}
       <div class="flex flex-col flex-1">
         {/* Header */}
         <div class="bg-gray-50 px-4 py-6 sm:px-6 dark:bg-gray-800/50">
           <div class="flex items-start justify-between space-x-3">
             <div class="flex items-center space-x-3">
-              <div class="w-12 h-12 flex-none text-gray-600 dark:text-gray-400">
-                <UserGroupIcon />
+              <div class="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 text-lg font-semibold">
+                {props.team.name.charAt(0)}
               </div>
               <div>
                 <h3 class="text-base font-semibold text-gray-900 dark:text-white">
@@ -191,9 +186,15 @@ export function TeamContent(props: TeamContentProps) {
                 return (
                   <div
                     key={userId}
-                    class="flex items-center text-sm text-gray-700 dark:text-gray-300"
+                    class="flex items-center text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded px-2 py-1 -mx-2 transition-colors"
+                    onClick={() => {
+                      const userMention = data.lookupUserMention(userId);
+                      if (userMention) {
+                        drawer.open({ type: "user", user: userMention });
+                      }
+                    }}
                   >
-                    <div class="w-6 h-6 flex-none rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-medium">
+                    <div class="w-6 h-6 flex-none rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-700 dark:text-yellow-400 text-xs font-semibold">
                       {user.displayName.charAt(0)}
                     </div>
                     <span class="ml-3 flex-auto truncate">
@@ -221,43 +222,18 @@ export function TeamContent(props: TeamContentProps) {
                     return (
                       <div
                         key={task.id}
-                        class="flex gap-3 text-xs/5 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded transition-colors"
+                        class="flex items-center text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded px-2 py-1 -mx-2 transition-colors"
                         onClick={() => handleTaskClick(task.id)}
                       >
-                        <div class="flex h-5 shrink-0 items-center">
-                          <div class="group/checkbox grid size-4 grid-cols-1">
-                            <input
-                              disabled
-                              type="checkbox"
-                              checked={
-                                task.completedTodosCount ===
-                                  task.totalTodosCount &&
-                                task.totalTodosCount > 0
-                              }
-                              readOnly
-                              class="col-start-1 row-start-1 appearance-none rounded-sm border border-(--color-border-secondary) bg-(--color-bg-primary) checked:border-(--color-accent-primary) checked:bg-(--color-accent-primary) disabled:border-(--color-border-secondary) disabled:bg-(--color-bg-secondary) disabled:checked:bg-(--color-bg-secondary) forced-colors:appearance-auto cursor-pointer"
-                            />
-                            <svg
-                              fill="none"
-                              viewBox="0 0 14 14"
-                              class="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white group-has-disabled/checkbox:stroke-(--color-text-secondary)"
-                            >
-                              <path
-                                d="M3 8L6 11L11 3.5"
-                                strokeWidth={2}
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="opacity-0 group-has-checked/checkbox:opacity-100"
-                              />
-                            </svg>
-                          </div>
+                        <div class="w-6 h-6 flex-none rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 text-xs font-semibold">
+                          {task.title.charAt(0)}
                         </div>
-                        <div class="flex-1 min-w-0 text-xs/5 text-(--color-text-primary)">
+                        <span class="ml-3 flex-auto truncate">
                           {task.title}
-                        </div>
-                        <div class="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                        </span>
+                        <span class="ml-3 text-xs text-gray-500 dark:text-gray-400 shrink-0">
                           {task.completedTodosCount}/{task.totalTodosCount}
-                        </div>
+                        </span>
                       </div>
                     );
                   })}

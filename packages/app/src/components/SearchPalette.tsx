@@ -2,11 +2,9 @@ import { useState, useRef, useEffect, useDerived } from "rask-ui";
 import { SearchPaletteContext } from "../contexts/SearchPaletteContext";
 import { DataContext } from "../contexts/DataContext";
 import type { Mention } from "@divergent-teams/shared";
-import { UserGroupIcon } from "./icons/UserGroupIcon";
 import { UserPreview } from "./UserPreview";
 import { TeamPreview } from "./TeamPreview";
 import { TaskPreview } from "./TaskPreview";
-import { DocumentCheckIcon } from "./icons/DocumentCheckIcon";
 
 export function SearchPalette() {
   const searchPalette = SearchPaletteContext.use();
@@ -154,15 +152,17 @@ export function SearchPalette() {
                           onMouseEnter={() => handleMouseEnter(index)}
                         >
                           {item.type === "user" ? (
-                            <div className="w-6 h-6 flex-none rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-medium">
+                            <div className="w-6 h-6 flex-none rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-700 dark:text-yellow-400 text-xs font-semibold">
                               {item.displayName.charAt(0)}
                             </div>
                           ) : item.type === "team" ? (
-                            <div className="w-6 h-6 flex-none text-gray-600 dark:text-gray-400">
-                              <UserGroupIcon />
+                            <div className="w-6 h-6 flex-none rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 text-xs font-semibold">
+                              {item.name.charAt(0)}
                             </div>
                           ) : (
-                            <DocumentCheckIcon className="w-6 h-6 flex-none text-green-600 dark:text-green-400" />
+                            <div className="w-6 h-6 flex-none rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 text-xs font-semibold">
+                              {item.title.charAt(0)}
+                            </div>
                           )}
                           <span className="ml-3 flex-auto truncate">
                             {item.type === "user"
