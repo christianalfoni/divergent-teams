@@ -10,6 +10,7 @@ import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import type { Todo } from "@divergent-teams/shared";
 import { MessagesLoadingPlaceholder } from "./MessagesLoadingPlaceholder";
 import { DataContext } from "../contexts/DataContext";
+import { DrawerContext } from "../contexts/DrawerContext";
 
 type Props = {
   width: number;
@@ -43,12 +44,34 @@ function formatTimestamp(timestamp: { toDate: () => Date }): string {
 
 export function TodoConversation(props: Props) {
   const data = DataContext.use();
+  const drawer = DrawerContext.use();
   const searchPalette = SearchPaletteContext.use();
   const authentication = AuthenticationContext.use();
   const conversation = useTodoConversation(props.todo);
   const editorRef = useRef<SmartEditorApi>();
   const messagesContainerRef = useRef<HTMLDivElement>();
   const messages = conversation.messages.data;
+
+  function handleUserClick(userId: string) {
+    const user = data.mentions.users.find((u) => u.userId === userId);
+    if (user) {
+      drawer.open({ type: "user", user });
+    }
+  }
+
+  function handleTeamClick(teamId: string) {
+    const team = data.mentions.teams.find((t) => t.id === teamId);
+    if (team) {
+      drawer.open({ type: "team", team });
+    }
+  }
+
+  function handleTaskClick(taskId: string) {
+    const task = data.mentions.tasks.find((t) => t.taskId === taskId);
+    if (task) {
+      drawer.open({ type: "task", task });
+    }
+  }
 
   // Auto-scroll to bottom when messages change
   useMountEffect(() => {
@@ -97,7 +120,12 @@ export function TodoConversation(props: Props) {
                       {formatTimestamp(message.createdAt)}
                     </span>
                   </div>
-                  <RichTextDisplay value={message.richText} />
+                  <RichTextDisplay
+                    value={message.richText}
+                    onUserClick={handleUserClick}
+                    onTeamClick={handleTeamClick}
+                    onTaskClick={handleTaskClick}
+                  />
                 </div>
               </div>
             );
@@ -119,7 +147,7 @@ export function TodoConversation(props: Props) {
               conversation.submitMessage(richText);
             }}
             onMention={(api) => {
-              searchPalette.openForMention((mention) => {
+              searchPalette.open((mention) => {
                 if (!mention) {
                   return;
                 }

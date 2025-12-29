@@ -6,6 +6,8 @@ import {
   type RichText,
 } from "./SmartEditor";
 import type { Todo } from "@divergent-teams/shared";
+import { DataContext } from "../contexts/DataContext";
+import { DrawerContext } from "../contexts/DrawerContext";
 
 interface TodoItemProps {
   todo: Todo;
@@ -23,6 +25,8 @@ function isRichTextEmpty(richText: RichText): boolean {
 }
 
 export default function TodoItem(props: TodoItemProps) {
+  const data = DataContext.use();
+  const drawer = DrawerContext.use();
   const state = useState({
     isEditing: false,
   });
@@ -32,6 +36,27 @@ export default function TodoItem(props: TodoItemProps) {
   let originalRichTextRef = props.todo.richText;
   let lastClickTimeRef = 0;
   let clickTimeoutRef = null as ReturnType<typeof setTimeout> | null;
+
+  function handleUserClick(userId: string) {
+    const user = data.mentions.users.find((u) => u.userId === userId);
+    if (user) {
+      drawer.open({ type: "user", user });
+    }
+  }
+
+  function handleTeamClick(teamId: string) {
+    const team = data.mentions.teams.find((t) => t.id === teamId);
+    if (team) {
+      drawer.open({ type: "team", team });
+    }
+  }
+
+  function handleTaskClick(taskId: string) {
+    const task = data.mentions.tasks.find((t) => t.taskId === taskId);
+    if (task) {
+      drawer.open({ type: "task", task });
+    }
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -244,7 +269,12 @@ export default function TodoItem(props: TodoItemProps) {
                 : "text-(--color-text-primary)"
             }`}
           >
-            <RichTextDisplay value={props.todo.richText} />
+            <RichTextDisplay
+              value={props.todo.richText}
+              onUserClick={handleUserClick}
+              onTeamClick={handleTeamClick}
+              onTaskClick={handleTaskClick}
+            />
           </div>
         </div>
       </div>

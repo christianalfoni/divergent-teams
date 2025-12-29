@@ -83,6 +83,13 @@ export function App() {
                 });
                 break;
               }
+              case "task": {
+                drawer.open({
+                  type: "task",
+                  task: mention,
+                });
+                break;
+              }
             }
           });
         }

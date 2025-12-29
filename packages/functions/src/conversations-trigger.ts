@@ -149,7 +149,9 @@ The RichText format uses:
 
 ## Your Task
 
-Generate a new RichText object for "${participantUser.displayName}" that ALWAYS follows this pattern:
+Generate a new RichText object for "${
+            participantUser.displayName
+          }" that ALWAYS follows this pattern:
 
 **ALWAYS start with [[0]] referencing the original creator**, followed by what they need/want:
 - "[[0]] would like to..."
@@ -170,7 +172,9 @@ Where [[0]] is a user mention resource:
 1. ALWAYS put the original creator as [[0]] in the resources array
 2. Start the text with "[[0]] would like to..." or similar pattern
 3. Describe what the original creator wants/needs based on their original todo
-4. If the original todo mentions the target user "${participantUser.displayName}" (ID: ${userId}), replace that mention with "you" or "your" - DO NOT include them as a resource
+4. If the original todo mentions the target user "${
+            participantUser.displayName
+          }" (ID: ${userId}), replace that mention with "you" or "your" - DO NOT include them as a resource
 5. Keep any other relevant resources from the original (tags, projects, links, etc.) but shift their indices
 6. Stay literal to the original todo - don't add extra context
 
@@ -238,7 +242,7 @@ Generate the RichText object now:`;
             userId: userId,
             richText: generatedRichText,
             completed: false,
-            isAccepted: false,
+            isGenerated: false,
             date: todoData.date,
             position: "a0", // Default position at the top
             conversationId: conversationId,

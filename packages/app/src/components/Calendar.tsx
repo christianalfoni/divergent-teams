@@ -128,6 +128,8 @@ export function Calendar() {
 
                     {/* Add new todo button or editor */}
                     {authentication.user &&
+                      !authentication.isAuthenticating &&
+                      !data.isLoading &&
                       state.addingTodoDayIndex !== index && (
                         <button
                           onClick={(e) => handleAddTodoClick(e, index)}

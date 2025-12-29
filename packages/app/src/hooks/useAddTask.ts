@@ -25,6 +25,7 @@ export function useAddTask() {
         details: params.details,
         completedTodosCount: 0,
         totalTodosCount: 0,
+        completed: false,
         createdBy: authentication.user.id,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),

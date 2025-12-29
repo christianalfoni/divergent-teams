@@ -24,88 +24,11 @@ export function TeamContent(props: TeamContentProps) {
     newTaskTitle: "",
   });
 
-  function renderMission() {
-    if (teamState.error) {
-      return (
-        <span class="text-red-600 dark:text-red-400">
-          {String(teamState.error)}
-        </span>
-      );
-    }
-
-    if (teamState.isLoading) {
-      return (
-        <div class="animate-pulse space-y-2">
-          <div class="h-4 w-full bg-(--color-skeleton) rounded"></div>
-          <div class="h-4 w-3/4 bg-(--color-skeleton) rounded"></div>
-        </div>
-      );
-    }
-
-    return teamState.value.mission.text || "No mission statement";
-  }
-
-  function renderCreatedBy() {
-    if (teamState.error) {
-      return null;
-    }
-
-    if (teamState.isLoading) {
-      return (
-        <div class="animate-pulse">
-          <div class="h-4 w-32 bg-(--color-skeleton) rounded"></div>
-        </div>
-      );
-    }
-
-    const creator = data.lookupUserMention(teamState.value.createdBy);
-    return creator ? creator.displayName : "Unknown";
-  }
-
-  function handleAddTaskClick(e: Rask.MouseEvent) {
-    e.stopPropagation();
-    state.isAddingTask = true;
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }
-
-  function handleKeyDown(e: Rask.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" && state.newTaskTitle.trim()) {
-      const title = state.newTaskTitle.trim();
-      state.newTaskTitle = "";
-      state.isAddingTask = false;
-
-      addTask.add({
-        teamId: props.team.id,
-        title: title,
-      });
-    } else if (e.key === "Escape") {
-      state.newTaskTitle = "";
-      state.isAddingTask = false;
-    }
-  }
-
-  function handleBlur() {
-    const title = state.newTaskTitle.trim();
-    state.newTaskTitle = "";
-    state.isAddingTask = false;
-
-    if (title) {
-      addTask.add({
-        teamId: props.team.id,
-        title: title,
-      });
-    }
-  }
-
-  function handleTaskClick(taskId: string) {
-    const taskMention = data.mentions.tasks.find((t) => t.taskId === taskId);
-    if (taskMention) {
-      drawer.open({ type: "task", task: taskMention });
-    }
-  }
-
   return () => (
-    <div class="relative flex h-full flex-col overflow-y-auto bg-white shadow-xl dark:bg-gray-800 dark:after:absolute dark:after:inset-y-0 dark:after:left-0 dark:after:w-px dark:after:bg-white/10" style={{ width: "448px" }}>
+    <div
+      class="relative flex h-full flex-col overflow-y-auto bg-white shadow-xl dark:bg-gray-800 dark:after:absolute dark:after:inset-y-0 dark:after:left-0 dark:after:w-px dark:after:bg-white/10"
+      style={{ width: "448px" }}
+    >
       {/* Main content area */}
       <div class="flex flex-col flex-1">
         {/* Header */}
@@ -186,7 +109,7 @@ export function TeamContent(props: TeamContentProps) {
                 return (
                   <div
                     key={userId}
-                    class="flex items-center text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded px-2 py-1 -mx-2 transition-colors"
+                    class="flex items-center text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-(--color-bg-hover) px-3 py-2 transition-colors"
                     onClick={() => {
                       const userMention = data.lookupUserMention(userId);
                       if (userMention) {
@@ -222,7 +145,7 @@ export function TeamContent(props: TeamContentProps) {
                     return (
                       <div
                         key={task.id}
-                        class="flex items-center text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded px-2 py-1 -mx-2 transition-colors"
+                        class="flex items-center text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-(--color-bg-hover) px-3 py-2 transition-colors"
                         onClick={() => handleTaskClick(task.id)}
                       >
                         <div class="w-6 h-6 flex-none rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 text-xs font-semibold">
@@ -285,4 +208,84 @@ export function TeamContent(props: TeamContentProps) {
       </div>
     </div>
   );
+
+  function renderMission() {
+    if (teamState.error) {
+      return (
+        <span class="text-red-600 dark:text-red-400">
+          {String(teamState.error)}
+        </span>
+      );
+    }
+
+    if (teamState.isLoading) {
+      return (
+        <div class="animate-pulse space-y-2">
+          <div class="h-4 w-full bg-(--color-skeleton) rounded"></div>
+          <div class="h-4 w-3/4 bg-(--color-skeleton) rounded"></div>
+        </div>
+      );
+    }
+
+    return teamState.value.mission.text || "No mission statement";
+  }
+
+  function renderCreatedBy() {
+    if (teamState.error) {
+      return null;
+    }
+
+    if (teamState.isLoading) {
+      return (
+        <div class="animate-pulse">
+          <div class="h-4 w-32 bg-(--color-skeleton) rounded"></div>
+        </div>
+      );
+    }
+
+    const creator = data.lookupUserMention(teamState.value.createdBy);
+    return creator ? creator.displayName : "Unknown";
+  }
+
+  function handleAddTaskClick(e: Rask.MouseEvent) {
+    e.stopPropagation();
+    state.isAddingTask = true;
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  function handleKeyDown(e: Rask.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && state.newTaskTitle.trim()) {
+      const title = state.newTaskTitle.trim();
+      state.newTaskTitle = "";
+      state.isAddingTask = false;
+
+      addTask.add({
+        teamId: props.team.id,
+        title: title,
+      });
+    } else if (e.key === "Escape") {
+      state.newTaskTitle = "";
+      state.isAddingTask = false;
+    }
+  }
+
+  function handleBlur() {
+    const title = state.newTaskTitle.trim();
+    state.newTaskTitle = "";
+    state.isAddingTask = false;
+
+    if (title) {
+      addTask.add({
+        teamId: props.team.id,
+        title: title,
+      });
+    }
+  }
+
+  function handleTaskClick(taskId: string) {
+    const taskMention = data.mentions.tasks.find((t) => t.taskId === taskId);
+    if (taskMention) {
+      drawer.open({ type: "task", task: taskMention });
+    }
+  }
 }

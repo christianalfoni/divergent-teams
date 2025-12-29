@@ -71,7 +71,7 @@ export interface Todo {
   userId: string;
   richText: RichText;
   completed: boolean;
-  isAccepted: boolean;
+  isGenerated: boolean;
   date: Timestamp;
   position: string; // Fractional index for ordering
   createdAt: Timestamp;
@@ -89,6 +89,7 @@ export interface Task {
   details?: RichText;
   totalTodosCount: number; // Total todos referencing this task
   completedTodosCount: number; // Completed todos referencing this task
+  completed: boolean; // Whether all todos are completed
   createdBy: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;

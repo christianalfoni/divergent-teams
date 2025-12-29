@@ -8,6 +8,7 @@
     "preview": "pnpm --filter @divergent-teams/app preview",
     "deploy:functions": "firebase deploy --only functions",
     "deploy:rules": "firebase deploy --only firestore:rules",
+    "deploy:indexes": "firebase deploy --only firestore:indexes",
     "shared:build": "pnpm --filter @divergent-teams/shared build",
     "functions:build": "pnpm --filter @divergent-teams/functions build",
     "functions:watch": "pnpm --filter @divergent-teams/functions build:watch"

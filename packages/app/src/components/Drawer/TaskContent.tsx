@@ -7,6 +7,7 @@ import { useState } from "rask-ui";
 import TodoItem from "../TodoItem";
 import { TodoConversation } from "../TodoConversation";
 import { Timestamp } from "firebase/firestore";
+import { useTaskTodos } from "../../hooks/useTaskTodos";
 
 type TaskContentProps = {
   task: TaskMention;
@@ -14,62 +15,47 @@ type TaskContentProps = {
 };
 
 export function TaskContent(props: TaskContentProps) {
+  let collapseResetTimeout: number | undefined;
   const data = DataContext.use();
   const drawer = DrawerContext.use();
   const taskState = useTask(props.task.taskId);
+  const state = useState({
+    selectedTodo: null as Todo | null,
+  });
 
-  const state = useState({});
-
-  function handleTodoClick(taskId: string, todo: Todo) {
+  function handleTodoClick(todo: Todo) {
     // Toggle: if clicking the same todo, collapse it
-    if (drawer.selectedTodo?.todo.id === todo.id) {
-      drawer.setSelectedTodo(taskId, null);
+    if (state.selectedTodo?.id === todo.id) {
+      drawer.collapse();
+      collapseResetTimeout = setTimeout(() => {
+        state.selectedTodo = null;
+      }, 250);
     } else {
-      drawer.setSelectedTodo(taskId, todo);
+      clearTimeout(collapseResetTimeout);
+      drawer.expand();
+      state.selectedTodo = todo;
     }
   }
 
-  // Mock todos for the task - in the future this will come from the backend
-  function getMockTodosForTask(taskId: string): Todo[] {
-    const now = Timestamp.now();
-    return [
-      {
-        id: `${taskId}-todo-1`,
-        userId: "mock-user-1",
-        richText: {
-          text: "Research best practices and patterns",
-          resources: [],
-        },
-        completed: true,
-        isAccepted: true,
-        date: now,
-        position: "0",
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: `${taskId}-todo-2`,
-        userId: "mock-user-1",
-        richText: { text: "Implement initial version", resources: [] },
-        completed: false,
-        isAccepted: true,
-        date: now,
-        position: "1",
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: `${taskId}-todo-3`,
-        userId: "mock-user-1",
-        richText: { text: "Write unit tests", resources: [] },
-        completed: false,
-        isAccepted: true,
-        date: now,
-        position: "2",
-        createdAt: now,
-        updatedAt: now,
-      },
-    ];
+  function handleUserClick(userId: string) {
+    const user = data.mentions.users.find((u) => u.userId === userId);
+    if (user) {
+      drawer.open({ type: "user", user });
+    }
+  }
+
+  function handleTeamClick(teamId: string) {
+    const team = data.mentions.teams.find((t) => t.id === teamId);
+    if (team) {
+      drawer.open({ type: "team", team });
+    }
+  }
+
+  function handleTaskClick(taskId: string) {
+    const task = data.mentions.tasks.find((t) => t.taskId === taskId);
+    if (task) {
+      drawer.open({ type: "task", task });
+    }
   }
 
   function renderDetails() {
@@ -98,7 +84,14 @@ export function TaskContent(props: TaskContentProps) {
       );
     }
 
-    return <RichTextDisplay value={taskState.value.details} />;
+    return (
+      <RichTextDisplay
+        value={taskState.value.details}
+        onUserClick={handleUserClick}
+        onTeamClick={handleTeamClick}
+        onTaskClick={handleTaskClick}
+      />
+    );
   }
 
   function renderTeamName() {
@@ -106,14 +99,7 @@ export function TaskContent(props: TaskContentProps) {
     return team ? team.name : "Unknown Team";
   }
 
-  function handleBackToTeam() {
-    const team = data.mentions.teams.find((t) => t.id === props.task.teamId);
-    if (team) {
-      drawer.open({ type: "team", team });
-    }
-  }
-
-  const mockTodos = getMockTodosForTask(props.task.taskId);
+  const todos = useTaskTodos(props.task.id);
 
   return () => (
     <div class="relative flex h-full bg-white shadow-xl dark:bg-gray-800 dark:after:absolute dark:after:inset-y-0 dark:after:left-0 dark:after:w-px dark:after:bg-white/10">
@@ -122,29 +108,6 @@ export function TaskContent(props: TaskContentProps) {
         class="flex flex-col flex-shrink-0 overflow-y-auto"
         style={{ width: "448px" }}
       >
-        {/* Breadcrumb */}
-        <div class="bg-white px-4 py-3 border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-          <button
-            onClick={handleBackToTeam}
-            class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 19.5L8.25 12l7.5-7.5"
-              />
-            </svg>
-            <span>Back to {renderTeamName()}</span>
-          </button>
-        </div>
-
         {/* Header */}
         <div class="bg-gray-50 px-4 py-6 sm:px-6 dark:bg-gray-800/50">
           <div class="flex items-start justify-between space-x-3">
@@ -208,13 +171,13 @@ export function TaskContent(props: TaskContentProps) {
               TODOS
             </h3>
             <div class="space-y-0">
-              {mockTodos.map((todo) => (
+              {todos.data.map((todo) => (
                 <TodoItem
                   key={todo.id}
                   todo={todo}
                   onToggleTodoComplete={() => {}}
-                  onClick={() => handleTodoClick(props.task.taskId, todo)}
-                  isActive={drawer.selectedTodo?.todo.id === todo.id}
+                  onClick={() => handleTodoClick(todo)}
+                  isActive={state.selectedTodo?.id === todo.id}
                 />
               ))}
             </div>
@@ -224,8 +187,8 @@ export function TaskContent(props: TaskContentProps) {
 
       {/* TodoConversation panel - always present at full width */}
       <div class="shrink-0 flex flex-col" style={{ width: "672px" }}>
-        {drawer.selectedTodo && (
-          <TodoConversation width={672} todo={drawer.selectedTodo.todo} />
+        {state.selectedTodo && (
+          <TodoConversation width={672} todo={state.selectedTodo} />
         )}
       </div>
     </div>

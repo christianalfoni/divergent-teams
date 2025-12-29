@@ -17,31 +17,31 @@ export const DrawerContext = createContext(() => {
   const backdrop = BackdropContext.use();
   const state = useState({
     isOpen: false,
+    isExpanded: false,
     content: null as DrawerContent | null,
-    selectedTodo: null as { taskId: string; todo: Todo } | null,
   });
 
-  return useView(state, { open, close, setSelectedTodo });
+  return useView(state, { open, close, expand, collapse });
 
   function open(content: DrawerContent) {
     assignState(state, {
       isOpen: true,
+      isExpanded: false,
       content,
-      selectedTodo: null,
     });
   }
 
   function close() {
     backdrop.close();
     state.isOpen = false;
-    state.selectedTodo = null;
+    state.isExpanded = false;
   }
 
-  function setSelectedTodo(taskId: string, todo: Todo | null) {
-    if (todo) {
-      state.selectedTodo = { taskId, todo };
-    } else {
-      state.selectedTodo = null;
-    }
+  function expand() {
+    state.isExpanded = true;
+  }
+
+  function collapse() {
+    state.isExpanded = false;
   }
 });

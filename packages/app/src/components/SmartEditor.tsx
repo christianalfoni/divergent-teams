@@ -201,7 +201,10 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
             <span
               key={i}
               className="mention-person"
-              onClick={() => props.onUserClick?.(entity.userId)}
+              onClick={(e) => {
+                e.stopPropagation();
+                props.onUserClick?.(entity.userId);
+              }}
               style={{ cursor: props.onUserClick ? "pointer" : "default" }}
             >
               {userName}
@@ -214,7 +217,10 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
             <span
               key={i}
               className="mention-team"
-              onClick={() => props.onTeamClick?.(entity.teamId)}
+              onClick={(e) => {
+                e.stopPropagation();
+                props.onTeamClick?.(entity.teamId);
+              }}
               style={{ cursor: props.onTeamClick ? "pointer" : "default" }}
             >
               {teamName}
@@ -227,7 +233,10 @@ export function RichTextDisplay(props: RichTextDisplayProps) {
             <span
               key={i}
               className="mention-task"
-              onClick={() => props.onTaskClick?.(entity.taskId)}
+              onClick={(e) => {
+                e.stopPropagation();
+                props.onTaskClick?.(entity.taskId);
+              }}
               style={{ cursor: props.onTaskClick ? "pointer" : "default" }}
             >
               {taskTitle}

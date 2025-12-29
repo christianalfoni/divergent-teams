@@ -76,8 +76,8 @@ service cloud.firestore {
         return request.resource.data.userId == request.auth.uid;
       }
 
-      // Allow read if user is org member and owns the todo
-      allow read: if isOrgMember() && isOwner();
+      // Allow read if user is org member (transparency - anyone can read)
+      allow read: if isOrgMember();
 
       // Allow create if user is org member and creating their own todo
       allow create: if isOrgMember() && isCreatingOwnTodo();

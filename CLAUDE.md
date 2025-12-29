@@ -2,6 +2,16 @@
 
 This application is built with **Rask UI**, a lightweight reactive component library that uses observable state management with virtual DOM reconciliation.
 
+## Development Workflow
+
+**IMPORTANT**: Do NOT start dev servers, run builds, or perform deployments (Firebase, npm, etc.). The user will handle all:
+- Starting/stopping dev servers (`npm run dev`, `pnpm dev`, etc.)
+- Building projects (`pnpm build`, `npm run build`, etc.)
+- Firebase deployments (`firebase deploy`)
+- Installing dependencies
+
+Your role is to **write and edit code only**. The user will manually execute commands as needed.
+
 ## About Rask UI
 
 Rask is an alternative to React that eliminates common pain points like stale closures, dependency arrays, and unnecessary complexity through its reactive state approach.

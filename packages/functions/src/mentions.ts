@@ -131,13 +131,13 @@ export const onTaskUpdate = onDocumentWritten(
       .collection("mentions")
       .doc(taskId);
 
-    // If task was deleted, delete the mention
-    if (!newData) {
+    // If task was deleted or is completed, delete the mention
+    if (!newData || newData?.completed === true) {
       await mentionRef.delete();
       return;
     }
 
-    // Create/update the mention with task info
+    // Create/update the mention with task info (only for non-completed tasks)
     await mentionRef.set(
       {
         type: "task",
