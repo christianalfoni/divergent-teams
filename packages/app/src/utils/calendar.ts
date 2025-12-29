@@ -91,3 +91,40 @@ export function getCurrentDayIndex() {
     return compareDate.getTime() === today.getTime();
   });
 }
+
+export function getNextWorkday(): Date {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+
+  let targetDate = new Date(today);
+
+  // If it's Saturday (6), move to Monday (+2 days)
+  // If it's Sunday (0), move to Monday (+1 day)
+  // Otherwise, use today
+  if (dayOfWeek === 6) {
+    targetDate.setDate(today.getDate() + 2);
+  } else if (dayOfWeek === 0) {
+    targetDate.setDate(today.getDate() + 1);
+  }
+
+  return targetDate;
+}
+
+export function isNextMonday(date: Date): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dayOfWeek = today.getDay();
+
+  // Only relevant if today is Friday
+  if (dayOfWeek !== 5) {
+    return false;
+  }
+
+  const nextMonday = new Date(today);
+  nextMonday.setDate(today.getDate() + 3); // Friday + 3 days = Monday
+
+  const compareDate = new Date(date);
+  compareDate.setHours(0, 0, 0, 0);
+
+  return compareDate.getTime() === nextMonday.getTime();
+}

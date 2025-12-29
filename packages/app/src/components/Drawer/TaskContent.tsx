@@ -178,6 +178,7 @@ export function TaskContent(props: TaskContentProps) {
                   onToggleTodoComplete={() => {}}
                   onClick={() => handleTodoClick(todo)}
                   isActive={state.selectedTodo?.id === todo.id}
+                  showMetadata={true}
                 />
               ))}
             </div>

@@ -1,14 +1,28 @@
 import { useEffect, useState, useRef, useDerived } from "rask-ui";
 import TodoItem from "./TodoItem";
-import { getCurrentDayIndex, getWeekdays, isSameDay } from "../utils/calendar";
+import {
+  getCurrentDayIndex,
+  getWeekdays,
+  isSameDay,
+  isToday,
+  isNextMonday,
+  getNextWorkday,
+} from "../utils/calendar";
 import { SmartEditor, type SmartEditorApi } from "./SmartEditor";
 import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import { TodosLoadingPlaceholder } from "./TodosLoadingPlaceholder";
 import { useAddTodo } from "../hooks/useAddTodo";
+import { useMoveTodos } from "../hooks/useMoveTodos";
+import { useReleaseGeneratedTodos } from "../hooks/useReleaseGeneratedTodos";
 import { DataContext } from "../contexts/DataContext";
 import type { Mention, Todo } from "@divergent-teams/shared";
 import { TodoConversation } from "./TodoConversation";
 import { SearchPaletteContext } from "../contexts/SearchPaletteContext";
+import {
+  getOldUncompletedTodos,
+  getGeneratedTodos,
+  filterOutGeneratedTodos,
+} from "../utils/todos";
 
 // Collapsed column width
 const COLLAPSED_WIDTH = 100;
@@ -23,11 +37,19 @@ export function Calendar() {
   const editorRefs = weekdays.map(() => useRef<SmartEditorApi>());
   const currentDayIndex = getCurrentDayIndex();
   const addTodo = useAddTodo();
+  const moveTodos = useMoveTodos();
+  const releaseGeneratedTodos = useReleaseGeneratedTodos();
   const derived = useDerived({
     todosByDay: () =>
       weekdays.map((date) => {
-        return data.todos.filter((todo) => isSameDay(date, todo.date.toDate()));
+        const todosForDay = data.todos.filter((todo) =>
+          isSameDay(date, todo.date.toDate())
+        );
+        // Filter out generated todos - they should never be displayed
+        return filterOutGeneratedTodos(todosForDay);
       }),
+    oldUncompletedTodos: () => getOldUncompletedTodos(data.todos),
+    generatedTodos: () => getGeneratedTodos(data.todos),
   });
 
   const state = useState({
@@ -97,6 +119,64 @@ export function Calendar() {
                     <span>{date.getDate()}</span>
                   </div>
                 </div>
+
+                {/* Move incomplete focus button */}
+                {(isToday(date) || isNextMonday(date)) &&
+                  authentication.user &&
+                  derived.oldUncompletedTodos.length > 0 && (
+                    <button
+                      onClick={(e) => handleMoveIncompleteTodos(e)}
+                      className="px-3 py-2 flex items-center gap-3 text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
+                      style={{ "font-size": "var(--todo-text-size)" }}
+                    >
+                      <div className="flex h-5 w-4 shrink-0 items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={2}
+                          stroke="currentColor"
+                          className="w-4 h-4"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M3 9h11m0 0v11m-3-3l3 3m0 0l3-3"
+                          />
+                        </svg>
+                      </div>
+                      <span className="text-sm">Move incomplete focus</span>
+                    </button>
+                  )}
+
+                {/* Show requested todos button */}
+                {isToday(date) &&
+                  authentication.user &&
+                  derived.generatedTodos.length > 0 && (
+                    <button
+                      onClick={(e) => handleShowRequestedTodos(e)}
+                      className="px-3 py-2 flex items-center gap-3 text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
+                      style={{ "font-size": "var(--todo-text-size)" }}
+                    >
+                      <div className="flex h-5 w-4 shrink-0 items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={2}
+                          stroke="currentColor"
+                          className="w-4 h-4"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"
+                          />
+                        </svg>
+                      </div>
+                      <span className="text-sm">Show requested todos...</span>
+                    </button>
+                  )}
 
                 {/* Todos list */}
                 <div className="flex-1 overflow-y-auto">
@@ -264,6 +344,31 @@ export function Calendar() {
   function handleDayClick() {
     if (!state.selectedTodo) {
       // Normal day expansion behavior could go here if needed
+    }
+  }
+
+  // Handle move incomplete todos
+  function handleMoveIncompleteTodos(e: any) {
+    e.stopPropagation();
+
+    const targetDate = getNextWorkday();
+    const todoIds = derived.oldUncompletedTodos.map((todo) => todo.id);
+
+    if (todoIds.length > 0) {
+      moveTodos.moveToDate({ todoIds, targetDate });
+    }
+  }
+
+  // Handle show requested todos
+  function handleShowRequestedTodos(e: any) {
+    e.stopPropagation();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todoIds = derived.generatedTodos.map((todo) => todo.id);
+
+    if (todoIds.length > 0) {
+      releaseGeneratedTodos.release({ todoIds, targetDate: today });
     }
   }
 

@@ -17,6 +17,7 @@ interface TodoItemProps {
   onClick?: () => void;
   availableTags?: string[];
   isActive?: boolean;
+  showMetadata?: boolean;
 }
 
 // Helper function to check if RichText content is empty
@@ -269,6 +270,21 @@ export default function TodoItem(props: TodoItemProps) {
                 : "text-(--color-text-primary)"
             }`}
           >
+            {props.showMetadata && (
+              <div className="flex items-center gap-2 mb-1 text-[10px]">
+                <span className="text-yellow-500">
+                  {data.lookupUserMention(props.todo.userId)?.displayName ||
+                    "Unknown"}
+                </span>
+                <span className="text-gray-500">
+                  {props.todo.updatedAt.toDate().toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+            )}
             <RichTextDisplay
               value={props.todo.richText}
               onUserClick={handleUserClick}

@@ -21,6 +21,7 @@ function extractTaskResources(richText: RichText): string[] {
 
 /**
  * Helper function to update task counts and completion status
+ * Uses a transaction to atomically update counts and completion state
  */
 async function updateTaskCounts(
   orgId: string,
@@ -37,53 +38,47 @@ async function updateTaskCounts(
   logger.info("📝 Starting task count update", { orgId, taskId, totalDelta, completedDelta });
 
   try {
-    // First, check if task exists
-    const taskSnapshot = await taskRef.get();
-    if (!taskSnapshot.exists) {
-      logger.error("❌ Task does not exist!", { taskId, orgId });
-      return;
-    }
+    await db.runTransaction(async (transaction) => {
+      const taskSnapshot = await transaction.get(taskRef);
 
-    const currentData = taskSnapshot.data();
-    logger.info("📋 Current task data before update:", {
-      taskId,
-      hasTotalTodosCount: "totalTodosCount" in (currentData || {}),
-      hasCompletedTodosCount: "completedTodosCount" in (currentData || {}),
-      currentTotalTodosCount: currentData?.totalTodosCount,
-      currentCompletedTodosCount: currentData?.completedTodosCount,
-    });
+      if (!taskSnapshot.exists) {
+        logger.error("❌ Task does not exist!", { taskId, orgId });
+        return;
+      }
 
-    // Use set with merge to ensure fields are created if they don't exist
-    await taskRef.set(
-      {
-        totalTodosCount: admin.firestore.FieldValue.increment(totalDelta),
-        completedTodosCount: admin.firestore.FieldValue.increment(completedDelta),
-      },
-      { merge: true }
-    );
+      const currentData = taskSnapshot.data();
+      const currentTotal = currentData?.totalTodosCount || 0;
+      const currentCompleted = currentData?.completedTodosCount || 0;
 
-    logger.info("✅ Count increment successful", { taskId });
-
-    // After updating counts, get fresh data and set the completed flag
-    const updatedTaskSnapshot = await taskRef.get();
-    if (updatedTaskSnapshot.exists) {
-      const taskData = updatedTaskSnapshot.data();
-      const totalCount = taskData?.totalTodosCount || 0;
-      const completedCount = taskData?.completedTodosCount || 0;
-
-      logger.info("📊 Current task counts AFTER update", { taskId, totalCount, completedCount });
-
-      // Task is completed when all todos are completed and there's at least one todo
-      const isCompleted = totalCount > 0 && totalCount === completedCount;
-
-      await taskRef.update({
-        completed: isCompleted,
+      logger.info("📋 Current task counts:", {
+        taskId,
+        currentTotal,
+        currentCompleted,
       });
 
-      logger.info("✅ Task completion status updated", { taskId, isCompleted });
-    } else {
-      logger.warn("⚠️ Task does not exist", { taskId });
-    }
+      // Calculate new counts
+      const newTotal = currentTotal + totalDelta;
+      const newCompleted = currentCompleted + completedDelta;
+
+      // Task is completed when all todos are completed and there's at least one todo
+      const isCompleted = newTotal > 0 && newTotal === newCompleted;
+
+      logger.info("📊 Updating to new values:", {
+        taskId,
+        newTotal,
+        newCompleted,
+        isCompleted,
+      });
+
+      // Update all fields atomically
+      transaction.update(taskRef, {
+        totalTodosCount: newTotal,
+        completedTodosCount: newCompleted,
+        completed: isCompleted,
+      });
+    });
+
+    logger.info("✅ Task counts and completion status updated", { taskId });
   } catch (error) {
     logger.error("❌ Error updating task counts", { orgId, taskId, error });
     throw error;
