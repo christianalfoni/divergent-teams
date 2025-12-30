@@ -145,7 +145,7 @@ export function Calendar() {
                           />
                         </svg>
                       </div>
-                      <span className="text-sm">Move incomplete focus</span>
+                      <span className="text-sm">Move incomplete todos</span>
                     </button>
                   )}
 

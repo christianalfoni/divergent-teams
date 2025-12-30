@@ -1,7 +1,11 @@
 import { createContext } from "rask-ui";
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { collection, getFirestore } from "firebase/firestore";
+import {
+  collection,
+  initializeFirestore,
+  memoryLocalCache,
+} from "firebase/firestore";
 
 export const FirebaseContext = createContext(() => {
   const firebaseConfig = {
@@ -14,7 +18,9 @@ export const FirebaseContext = createContext(() => {
   };
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const firestore = getFirestore(app);
+  const firestore = initializeFirestore(app, {
+    localCache: memoryLocalCache(),
+  });
   const collections = {
     todos(organizationId: string) {
       return collection(firestore, "organizations", organizationId, "todos");

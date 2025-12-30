@@ -17,7 +17,12 @@ type Props = {
   todo: Todo;
 };
 
-function formatTimestamp(timestamp: { toDate: () => Date }): string {
+function formatTimestamp(timestamp: { toDate: () => Date } | null): string {
+  // Handle null/undefined timestamps (optimistic updates)
+  if (!timestamp || !timestamp.toDate) {
+    return "Just now";
+  }
+
   const date = timestamp.toDate();
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();

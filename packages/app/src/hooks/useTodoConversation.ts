@@ -7,6 +7,7 @@ import type { RichText } from "../components/SmartEditor";
 import {
   arrayUnion,
   doc,
+  getDoc,
   orderBy,
   query,
   serverTimestamp,
@@ -50,27 +51,45 @@ export function useTodoConversation(todo: Todo) {
         const userMentionIds = richText.resources
           .filter((resource) => resource.type === "user")
           .map((resource) => resource.userId);
-        updateConversation = () =>
-          updateDoc(conversationDoc, {
-            participantUserIds: arrayUnion(...userMentionIds),
-          });
+
+        // Extract team mentions and get their member IDs
+        const teamMentionIds = richText.resources
+          .filter((resource) => resource.type === "team")
+          .map((resource) => resource.teamId);
+
+        const teamMemberIds = await Promise.all(
+          teamMentionIds.map(async (teamId) => {
+            const teamDoc = await getDoc(
+              doc(
+                firebase.collections.teams(authentication.user.organizationId),
+                teamId
+              )
+            );
+            const teamData = teamDoc.data();
+            return (teamData?.members || []) as string[];
+          })
+        ).then((memberArrays) => memberArrays.flat());
+
+        updateConversation = () => {
+          const updates: any = {
+            participantUserIds: arrayUnion(...userMentionIds, ...teamMemberIds),
+          };
+
+          return updateDoc(conversationDoc, updates);
+        };
       } else {
         const todosCollection = firebase.collections.todos(
           authentication.user.organizationId
         );
         const conversationDoc = doc(conversationsCollection);
         const todoDoc = doc(todosCollection, todo.id);
+
+        // Client only adds itself as participant
+        // Firebase Function will look at the referenced todo and add participants based on mentions
         const conversation: Conversation = {
           id: conversationDoc.id,
           createdAt: Timestamp.now(),
-          participantUserIds: [authentication.user.id].concat(
-            ...todo.richText.resources
-              .filter((resource) => resource.type === "user")
-              .map((resource) => resource.userId),
-            ...richText.resources
-              .filter((resource) => resource.type === "user")
-              .map((resource) => resource.userId)
-          ),
+          participantUserIds: [authentication.user.id],
           reference: {
             type: "todo",
             id: todo.id,

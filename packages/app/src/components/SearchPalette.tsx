@@ -16,15 +16,22 @@ export function SearchPalette() {
   });
   const derived = useDerived({
     filteredMentions: () => {
-      const allMentions = [
+      // Apply type filter first
+      let mentions = [
         ...data.mentions.users,
         ...data.mentions.teams,
         ...data.mentions.tasks,
       ];
-      if (state.query === "") {
-        return allMentions;
+
+      if (searchPalette.filter) {
+        mentions = mentions.filter((item) => item.type === searchPalette.filter);
       }
-      return allMentions.filter((item) => {
+
+      // Then apply search query
+      if (state.query === "") {
+        return mentions;
+      }
+      return mentions.filter((item) => {
         const searchTerm = state.query.toLowerCase();
         if (item.type === "user") {
           return item.displayName.toLowerCase().includes(searchTerm);

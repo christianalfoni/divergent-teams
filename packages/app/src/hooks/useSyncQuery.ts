@@ -33,6 +33,11 @@ export function useSyncQuery<T extends { id: string }>(
       (snapshot) => {
         state.isLoading = false;
         snapshot.docChanges().forEach((docChange) => {
+          // Skip individual documents that have pending writes (not yet confirmed by server)
+          if (docChange.doc.metadata.hasPendingWrites) {
+            return;
+          }
+
           const data = docChange.doc.data() as T;
           const item = state.data.find((item) => item.id === docChange.doc.id);
 

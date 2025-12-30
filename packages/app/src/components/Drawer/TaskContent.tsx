@@ -1,4 +1,4 @@
-import type { TaskMention, Todo } from "@divergent-teams/shared";
+import type { TaskMention, Todo, UserMention } from "@divergent-teams/shared";
 import { DataContext } from "../../contexts/DataContext";
 import { DrawerContext } from "../../contexts/DrawerContext";
 import { useTask } from "../../hooks/useTask";
@@ -8,6 +8,9 @@ import TodoItem from "../TodoItem";
 import { TodoConversation } from "../TodoConversation";
 import { Timestamp } from "firebase/firestore";
 import { useTaskTodos } from "../../hooks/useTaskTodos";
+import { useCreateTodoForTask } from "../../hooks/useCreateTodoForTask";
+import { SearchPaletteContext } from "../../contexts/SearchPaletteContext";
+import { AuthenticationContext } from "../../contexts/AuthenticationContext";
 
 type TaskContentProps = {
   task: TaskMention;
@@ -18,7 +21,10 @@ export function TaskContent(props: TaskContentProps) {
   let collapseResetTimeout: number | undefined;
   const data = DataContext.use();
   const drawer = DrawerContext.use();
+  const authentication = AuthenticationContext.use();
+  const searchPalette = SearchPaletteContext.use();
   const taskState = useTask(props.task.taskId);
+  const createTodoForTask = useCreateTodoForTask();
   const state = useState({
     selectedTodo: null as Todo | null,
   });
@@ -56,6 +62,41 @@ export function TaskContent(props: TaskContentProps) {
     if (task) {
       drawer.open({ type: "task", task });
     }
+  }
+
+  function handleCreateTodo() {
+    if (!authentication.user) return;
+
+    const richText = {
+      text: "Work on [[0]]",
+      resources: [{ type: "task" as const, taskId: props.task.taskId }],
+    };
+
+    createTodoForTask.create({
+      userId: authentication.user.id,
+      richText,
+      date: new Date(),
+      isGenerated: false,
+    });
+  }
+
+  function handleAssignTodo() {
+    searchPalette.open((mention) => {
+      if (mention && mention.type === "user") {
+        const userMention = mention as UserMention;
+        const richText = {
+          text: "Work on [[0]]",
+          resources: [{ type: "task" as const, taskId: props.task.taskId }],
+        };
+
+        createTodoForTask.create({
+          userId: userMention.userId,
+          richText,
+          date: new Date(),
+          isGenerated: true,
+        });
+      }
+    }, "user");
   }
 
   function renderDetails() {
@@ -101,7 +142,25 @@ export function TaskContent(props: TaskContentProps) {
 
   const todos = useTaskTodos(props.task.id);
 
-  return () => (
+  function hasCurrentUserTodoForTask() {
+    if (!authentication.user) return false;
+
+    return data.todos.some((todo) => {
+      // Check if this todo belongs to the current user
+      if (todo.userId !== authentication.user!.id) return false;
+
+      // Check if this todo has a resource referencing the current task
+      return todo.richText.resources.some(
+        (resource) =>
+          resource.type === "task" && resource.taskId === props.task.taskId
+      );
+    });
+  }
+
+  return () => {
+    const currentUserHasTodo = hasCurrentUserTodoForTask();
+
+    return (
     <div class="relative flex h-full bg-white shadow-xl dark:bg-gray-800 dark:after:absolute dark:after:inset-y-0 dark:after:left-0 dark:after:w-px dark:after:bg-white/10">
       {/* Main content area */}
       <div
@@ -153,6 +212,57 @@ export function TaskContent(props: TaskContentProps) {
 
         {/* Content */}
         <div class="flex-1">
+          {/* Action Buttons */}
+          <div class="px-6 pt-6 pb-3">
+            <div class="flex gap-2">
+              <button
+                type="button"
+                onClick={handleCreateTodo}
+                disabled={currentUserHasTodo}
+                class={`flex-1 inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold shadow-sm ring-1 ring-inset ${
+                  currentUserHasTodo
+                    ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 ring-gray-200 dark:ring-gray-700 cursor-not-allowed"
+                    : "bg-white dark:bg-gray-700 text-gray-900 dark:text-white ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+                }`}
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M12 4.5v15m7.5-7.5h-15"
+                  />
+                </svg>
+                Create todo
+              </button>
+              <button
+                type="button"
+                onClick={handleAssignTodo}
+                class="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"
+                  />
+                </svg>
+                Assign todo
+              </button>
+            </div>
+          </div>
+
           {/* Task Info */}
           <div class="p-6 space-y-4">
             <div>
@@ -193,5 +303,6 @@ export function TaskContent(props: TaskContentProps) {
         )}
       </div>
     </div>
-  );
+    );
+  };
 }

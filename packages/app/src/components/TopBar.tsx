@@ -1,7 +1,9 @@
+import { AuthenticationContext } from "../contexts/AuthenticationContext";
 import { DrawerContext } from "../contexts/DrawerContext";
 import { UserGroupIcon } from "./icons/UserGroupIcon";
 
 export function TopBar() {
+  const authentication = AuthenticationContext.use();
   const drawer = DrawerContext.use();
 
   return () => (
@@ -14,6 +16,12 @@ export function TopBar() {
                 Divergent Teams
               </span>
             </div>
+            {authentication.user ? (
+              <div class="flex items-center gap-2 text-sm text-(--color-text-secondary)">
+                <span>•</span>
+                <span>{authentication.user.displayName || authentication.user.email}</span>
+              </div>
+            ) : null}
           </div>
 
           <div class="hidden sm:ml-6 sm:flex sm:items-center gap-3">

@@ -144,21 +144,16 @@ service cloud.firestore {
             && request.auth.token.organizationId == organizationId;
         }
 
-        // Helper function to check if user is a participant in the parent conversation
-        function isConversationParticipant() {
-          return request.auth.uid in get(/databases/$(database)/documents/organizations/$(organizationId)/conversations/$(conversationId)).data.participantUserIds;
-        }
-
         // Helper function to check if user is creating their own message
         function isCreatingOwnMessage() {
           return request.resource.data.userId == request.auth.uid;
         }
 
-        // Allow read if user is org member and is a participant in the conversation
-        allow read: if isOrgMember() && isConversationParticipant();
+        // Allow read if user is org member (transparency - anyone in org can read)
+        allow read: if isOrgMember();
 
-        // Allow create if user is org member, is a participant, and is creating their own message
-        allow create: if isOrgMember() && isConversationParticipant() && isCreatingOwnMessage();
+        // Allow create if user is org member and is creating their own message
+        allow create: if isOrgMember() && isCreatingOwnMessage();
 
         // Messages are immutable - no updates or deletes allowed
       }

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter @divergent-teams/app dev",
+    "dev": "concurrently \"PORT=5173 pnpm --filter @divergent-teams/app dev\" \"PORT=5174 pnpm --filter @divergent-teams/app dev\"",
     "build": "pnpm --filter @divergent-teams/app build",
     "preview": "pnpm --filter @divergent-teams/app preview",
     "deploy:functions": "firebase deploy --only functions",
@@ -14,6 +14,7 @@
     "functions:watch": "pnpm --filter @divergent-teams/functions build:watch"
   },
   "devDependencies": {
+    "concurrently": "^9.1.2",
     "typescript": "^5.7.3"
   },
   "dependencies": {}
