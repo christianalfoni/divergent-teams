@@ -5,9 +5,7 @@ import { useSyncQuery } from "./useSyncQuery";
 import type { Conversation, Message, Todo } from "@divergent-teams/shared";
 import type { RichText } from "../components/SmartEditor";
 import {
-  arrayUnion,
   doc,
-  getDoc,
   orderBy,
   query,
   serverTimestamp,
@@ -37,59 +35,22 @@ export function useTodoConversation(todo: Todo) {
         throw new Error("You have to be authenticated to submit a message");
       }
 
-      let updateConversation: (() => void) | undefined;
-
       const conversationsCollection = firebase.collections.conversations(
         authentication.user.organizationId
       );
+      const isFirstMessage = !todo.conversationId;
 
-      if (todo.conversationId) {
-        const conversationDoc = doc(
-          conversationsCollection,
-          todo.conversationId
-        );
-        const userMentionIds = richText.resources
-          .filter((resource) => resource.type === "user")
-          .map((resource) => resource.userId);
-
-        // Extract team mentions and get their member IDs
-        const teamMentionIds = richText.resources
-          .filter((resource) => resource.type === "team")
-          .map((resource) => resource.teamId);
-
-        const teamMemberIds = await Promise.all(
-          teamMentionIds.map(async (teamId) => {
-            const teamDoc = await getDoc(
-              doc(
-                firebase.collections.teams(authentication.user.organizationId),
-                teamId
-              )
-            );
-            const teamData = teamDoc.data();
-            return (teamData?.members || []) as string[];
-          })
-        ).then((memberArrays) => memberArrays.flat());
-
-        updateConversation = () => {
-          const updates: any = {
-            participantUserIds: arrayUnion(...userMentionIds, ...teamMemberIds),
-          };
-
-          return updateDoc(conversationDoc, updates);
-        };
-      } else {
+      // Create conversation if needed
+      if (!todo.conversationId) {
         const todosCollection = firebase.collections.todos(
           authentication.user.organizationId
         );
         const conversationDoc = doc(conversationsCollection);
         const todoDoc = doc(todosCollection, todo.id);
 
-        // Client only adds itself as participant
-        // Firebase Function will look at the referenced todo and add participants based on mentions
         const conversation: Conversation = {
           id: conversationDoc.id,
           createdAt: Timestamp.now(),
-          participantUserIds: [authentication.user.id],
           reference: {
             type: "todo",
             id: todo.id,
@@ -98,18 +59,19 @@ export function useTodoConversation(todo: Todo) {
 
         const { id: _, ...conversationData } = conversation;
         todo.conversationId = conversation.id;
-        updateConversation = () =>
-          Promise.all([
-            setDoc(conversationDoc, {
-              ...conversationData,
-              createdAt: serverTimestamp(),
-            }),
-            updateDoc(todoDoc, {
-              conversationId: conversation.id,
-            }),
-          ]);
+
+        await Promise.all([
+          setDoc(conversationDoc, {
+            ...conversationData,
+            createdAt: serverTimestamp(),
+          }),
+          updateDoc(todoDoc, {
+            conversationId: conversation.id,
+          }),
+        ]);
       }
 
+      // Create the message
       const messagesCollection = firebase.collections.conversationMessages(
         authentication.user.organizationId,
         todo.conversationId
@@ -120,19 +82,23 @@ export function useTodoConversation(todo: Todo) {
         createdAt: Timestamp.now(),
         richText,
         userId: authentication.user.id,
+        isFirstMessage,
       };
 
       messages.data.push(message);
 
-      await updateConversation?.();
-
       await setDoc(messageDoc, {
         userId: message.userId,
         richText: message.richText,
+        isFirstMessage: message.isFirstMessage,
         createdAt: serverTimestamp(),
       });
     }
   );
 
-  return { messages, submitMessage, submitMessageState };
+  return {
+    messages,
+    submitMessage,
+    submitMessageState,
+  };
 }

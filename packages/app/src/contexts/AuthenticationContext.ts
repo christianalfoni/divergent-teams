@@ -112,8 +112,11 @@ export const AuthenticationContext = createContext(() => {
   async function handleLogin() {
     const provider = new OAuthProvider("oidc.workos");
 
+    const organizationId = import.meta.env.VITE_WORK_OS_ORGANIZATION_ID;
+    console.log("WorkOS Login - Organization ID:", organizationId);
+
     provider.setCustomParameters({
-      organization: import.meta.env.VITE_WORK_OS_ORGANIZATION_ID,
+      organization: organizationId,
     });
 
     assignState(state, {

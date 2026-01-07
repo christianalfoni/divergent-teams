@@ -31,7 +31,6 @@ export interface Conversation {
   id: string;
   reference: { type: "todo"; id: string };
   createdAt: Timestamp;
-  participantUserIds: string[];
 }
 
 export interface Message {
@@ -41,6 +40,7 @@ export interface Message {
     text: string;
     resources: Resource[];
   };
+  isFirstMessage: boolean;
   createdAt: Timestamp;
 }
 

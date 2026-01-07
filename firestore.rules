@@ -116,24 +116,8 @@ service cloud.firestore {
           && request.auth.token.organizationId == organizationId;
       }
 
-      // Helper function to check if user is a participant (for existing docs)
-      function isParticipant() {
-        return request.auth.uid in resource.data.participantUserIds;
-      }
-
-      // Helper function to check if user is a participant (for new/updated docs)
-      function isParticipantInRequest() {
-        return request.auth.uid in request.resource.data.participantUserIds;
-      }
-
-      // Allow read if user is org member and is a participant
-      allow read: if isOrgMember() && isParticipant();
-
-      // Allow create if user is org member and is included as a participant
-      allow create: if isOrgMember() && isParticipantInRequest();
-
-      // Allow update/delete if user is org member and is a participant
-      allow update, delete: if isOrgMember() && isParticipant();
+      // Allow read/write if user is org member (transparency - anyone in org can access)
+      allow read, create, update, delete: if isOrgMember();
 
       // Rules for messages within a conversation
       match /messages/{messageId} {
