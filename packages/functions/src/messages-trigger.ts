@@ -109,6 +109,10 @@ export const onMessageCreated = onDocumentCreated(
 
     const todoData = todoDoc.data() as Todo;
 
+    // Track mention sources for different generation strategies
+    const todoMentionedUsers = new Set<string>();
+    const messageMentionedUsers = new Set<string>();
+
     // If this is the first message, also extract mentions from the todo
     if (messageData.isFirstMessage) {
       console.log("First message - also extracting mentions from todo");
@@ -121,7 +125,26 @@ export const onMessageCreated = onDocumentCreated(
         .filter((resource: any) => resource.type === "team")
         .map((resource: any) => resource.teamId);
 
-      userMentions = [...userMentions, ...todoUserMentions];
+      // Fetch team members for todo team mentions
+      const todoTeamMemberIds = await Promise.all(
+        todoTeamMentions.map(async (teamId: string) => {
+          const teamDoc = await db
+            .collection("organizations")
+            .doc(orgId)
+            .collection("teams")
+            .doc(teamId)
+            .get();
+          const teamData = teamDoc.data();
+          return (teamData?.members || []) as string[];
+        })
+      ).then((memberArrays) => memberArrays.flat());
+
+      // Track these as todo-sourced mentions
+      [...todoUserMentions, ...todoTeamMemberIds].forEach(userId =>
+        todoMentionedUsers.add(userId)
+      );
+
+      userMentions = [...userMentions, ...todoUserMentions, ...todoTeamMemberIds];
       teamMentions = [...teamMentions, ...todoTeamMentions];
     }
 
@@ -137,8 +160,8 @@ export const onMessageCreated = onDocumentCreated(
       return;
     }
 
-    // Fetch team members for all team mentions
-    const teamMemberIds = await Promise.all(
+    // Fetch team members for message team mentions
+    const messageTeamMemberIds = await Promise.all(
       teamMentions.map(async (teamId: string) => {
         const teamDoc = await db
           .collection("organizations")
@@ -151,8 +174,17 @@ export const onMessageCreated = onDocumentCreated(
       })
     ).then((memberArrays) => memberArrays.flat());
 
+    // Track message-sourced mentions (users directly mentioned in message + team members from message teams)
+    const directMessageMentions = messageData.richText.resources
+      .filter((resource: any) => resource.type === "user")
+      .map((resource: any) => resource.userId);
+
+    [...directMessageMentions, ...messageTeamMemberIds].forEach(userId =>
+      messageMentionedUsers.add(userId)
+    );
+
     // Combine user mentions and team members
-    const allMentionedUserIds = [...new Set([...userMentions, ...teamMemberIds])];
+    const allMentionedUserIds = [...new Set([...userMentions, ...messageTeamMemberIds])];
 
     console.log(`Total ${allMentionedUserIds.length} users mentioned (after resolving teams)`);
 
@@ -189,57 +221,55 @@ export const onMessageCreated = onDocumentCreated(
       const originalRichText = todoData.richText;
       const messageRichText = messageData.richText;
 
-      const prompt = `You are generating a todo item for multiple users based on what another user needs from them.
+      // Determine if this is primarily todo-based or message-based
+      const todoSourcedCount = mentionedUsersExcludingOwner.filter(userId =>
+        todoMentionedUsers.has(userId)
+      ).length;
+      const messageSourcedCount = mentionedUsersExcludingOwner.filter(userId =>
+        messageMentionedUsers.has(userId)
+      ).length;
+
+      const isFromTodo = todoSourcedCount > messageSourcedCount;
+
+      const prompt = `Generate a todo for users who were mentioned.
 
 ## Context
 
-**Original Todo Creator:**
-- User ID: ${ownerUserId}
-- Display Name: "${ownerUserData.displayName}"
+**Todo Creator:** ${ownerUserData.displayName} (ID: ${ownerUserId})
 
-**Original Todo (what ${ownerUserData.displayName} needs to do):**
+**Original Todo:**
 Text: ${originalRichText.text}
 Resources: ${JSON.stringify(originalRichText.resources, null, 2)}
 
-**Message that triggered this (additional context):**
+**${isFromTodo ? 'First Message' : 'Message'} (trigger only):**
 Text: ${messageRichText.text}
 Resources: ${JSON.stringify(messageRichText.resources, null, 2)}
 
+## Important
+The generated todo will share the SAME CONVERSATION as the original todo. All messages are visible to everyone in the conversation. Don't duplicate message content in the generated todo.
+
+The original todo describes WHAT needs to be done. The message is just the trigger.
+
 ## RichText Format
+Text uses placeholders [[0]], [[1]] that reference resources array.
+Resources: user mentions, tags, teams, tasks, links.
 
-The RichText format uses:
-- Placeholders like [[0]], [[1]], etc. in the text field
-- These placeholders reference resources by their index in the resources array
-- Resources can be tags, user mentions, teams, tasks, or links
+## Instructions
+Create a todo with the correct perspective for the mentioned users.
 
-## Your Task
-
-Generate a new RichText object for the mentioned users that ALWAYS follows this pattern:
-
-**ALWAYS start with [[0]] referencing the original creator**, followed by what they need/want:
-- "[[0]] would like to..."
-- "[[0]] needs..."
-- "[[0]] wants..."
-- "[[0]] is asking to..."
-
-Where [[0]] is a user mention resource:
-\`\`\`json
+The todo creator is [[0]]:
 {
   "type": "user",
   "userId": "${ownerUserId}"
 }
-\`\`\`
 
-**Rules:**
-1. ALWAYS put the original creator as [[0]] in the resources array
-2. Start the text with "[[0]] would like to..." or similar pattern
-3. Use BOTH the original todo and the message context to understand what the creator wants
-4. Describe what the original creator wants/needs based on their original todo AND the message
-5. Make the message generic (don't personalize to specific users)
-6. Keep any other relevant resources from the original (tags, tasks, links, etc.) but shift their indices appropriately
-7. Stay literal to the original todo and message - don't add extra context
+The mentioned users are the TARGET of the todo. Generate the todo FROM THEIR PERSPECTIVE.
+Start with "[[0]] needs you to..." or "[[0]] would like you to..."
 
-Generate the RichText object now:`;
+IMPORTANT: Do not include the target users' names in the generated todo - use "you" or "your" instead.
+
+Include relevant resources from the original todo (tags, tasks, links, etc).
+Don't add extra context - stay literal to the original todo.`;
 
       const completion = await openai.chat.completions.parse({
         model: "gpt-5-nano-2025-08-07",
@@ -311,74 +341,51 @@ Generate the RichText object now:`;
           const originalRichText = todoData.richText;
           const messageRichText = messageData.richText;
 
-          const prompt = `You are generating a todo item for a user based on what another user needs from them.
+          // Determine if this user is from todo or message
+          const isFromTodo = todoMentionedUsers.has(userId);
+
+          const prompt = `Generate a todo for ${participantUser.displayName}.
 
 ## Context
 
-**Original Todo Creator:**
-- User ID: ${ownerUserId}
-- Display Name: "${ownerUserData.displayName}"
+**Todo Creator:** ${ownerUserData.displayName} (ID: ${ownerUserId})
 
-**Original Todo (what ${ownerUserData.displayName} needs to do):**
+**Original Todo:**
 Text: ${originalRichText.text}
 Resources: ${JSON.stringify(originalRichText.resources, null, 2)}
 
-**Message that triggered this (additional context):**
+**${isFromTodo ? 'First Message' : 'Message'} (trigger only):**
 Text: ${messageRichText.text}
 Resources: ${JSON.stringify(messageRichText.resources, null, 2)}
 
-**Target User (who needs the new todo):**
-- User ID: ${userId}
-- Display Name: "${participantUser.displayName}"
+**Target User:** ${participantUser.displayName} (ID: ${userId})
+
+## Important
+The generated todo will share the SAME CONVERSATION as the original todo. All messages are visible to everyone in the conversation. Don't duplicate message content in the generated todo.
+
+The original todo describes WHAT needs to be done. The message is just the trigger.
 
 ## RichText Format
+Text uses placeholders [[0]], [[1]] that reference resources array.
+Resources: user mentions, tags, teams, tasks, links.
 
-The RichText format uses:
-- Placeholders like [[0]], [[1]], etc. in the text field
-- These placeholders reference resources by their index in the resources array
-- Resources can be tags, user mentions, projects, issues, or links
+## Instructions
+Create a todo FROM THE PERSPECTIVE of ${participantUser.displayName}.
 
-## Your Task
-
-Generate a new RichText object for "${participantUser.displayName}" that ALWAYS follows this pattern:
-
-**ALWAYS start with [[0]] referencing the original creator**, followed by what they need/want:
-- "[[0]] would like to..."
-- "[[0]] needs..."
-- "[[0]] wants to..."
-- "[[0]] is asking to..."
-
-Where [[0]] is a user mention resource:
-\`\`\`json
+The todo creator is [[0]]:
 {
   "type": "user",
   "userId": "${ownerUserId}",
   "display": "${ownerUserData.displayName}"
 }
-\`\`\`
 
-**Rules:**
-1. ALWAYS put the original creator as [[0]] in the resources array
-2. Start the text with "[[0]] would like to..." or similar pattern
-3. Use BOTH the original todo and the message context to understand what the creator wants
-4. Describe what the original creator wants/needs based on their original todo AND the message
-5. If the original todo mentions the target user "${participantUser.displayName}" (ID: ${userId}), replace that mention with "you" or "your" - DO NOT include them as a resource
-6. Keep any other relevant resources from the original (tags, projects, links, etc.) but shift their indices
-7. Stay literal to the original todo and message - don't add extra context
+${participantUser.displayName} is the TARGET. Generate what THEY need to do.
+Start with "[[0]] needs you to..." or "[[0]] would like you to..."
 
-## Examples
+IMPORTANT: Replace any mention of "${participantUser.displayName}" with "you" or "your" - do NOT include them as a resource.
 
-Original: "Review [[0]]'s PR for [[1]]" (where [[0]] is the target user)
-Generated: "[[0]] would like to review your PR for [[1]]"
-- Resources: [creator user mention, project from original]
-- Note: Target user mention replaced with "your"
-
-Original: "Schedule meeting with [[0]] about [[1]]" (where [[0]] is the target user)
-Generated: "[[0]] needs to schedule a meeting with you about [[1]]"
-- Resources: [creator user mention, tag from original]
-- Note: Target user mention replaced with "you"
-
-Generate the RichText object now:`;
+Include relevant resources from the original todo (tags, tasks, links, etc).
+Don't add extra context - stay literal to the original todo.`;
 
           const completion = await openai.chat.completions.parse({
             model: "gpt-5-nano-2025-08-07",
