@@ -6,7 +6,12 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
 import { createOpenAIClient, openaiApiKey } from "./openai-client";
-import type { Conversation, Message, Todo, User } from "@divergent-teams/shared";
+import type {
+  Conversation,
+  Message,
+  Todo,
+  User,
+} from "@divergent-teams/shared";
 import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
 
@@ -47,12 +52,69 @@ const RichTextSchema = z.object({
 });
 
 /**
+ * Converts RichText to plain display text by resolving resource placeholders
+ */
+async function richTextToDisplayText(
+  richText: { text: string; resources: any[] },
+  db: admin.firestore.Firestore,
+  orgId: string
+): Promise<string> {
+  let displayText = richText.text;
+
+  // Process resources in reverse order to maintain correct indices during replacement
+  for (let i = richText.resources.length - 1; i >= 0; i--) {
+    const resource = richText.resources[i];
+    const placeholder = `[[${i}]]`;
+    let replacement = "";
+
+    switch (resource.type) {
+      case "user": {
+        const userDoc = await db
+          .collection("organizations")
+          .doc(orgId)
+          .collection("users")
+          .doc(resource.userId)
+          .get();
+        const userData = userDoc.data() as User | undefined;
+        replacement = userData?.displayName || "Unknown User";
+        break;
+      }
+      case "team": {
+        const teamDoc = await db
+          .collection("organizations")
+          .doc(orgId)
+          .collection("teams")
+          .doc(resource.teamId)
+          .get();
+        const teamData = teamDoc.data();
+        replacement = teamData?.name || "Unknown Team";
+        break;
+      }
+      case "tag":
+        replacement = `#${resource.tag}`;
+        break;
+      case "task":
+        replacement = `Task ${resource.taskId}`;
+        break;
+      case "link":
+        replacement = resource.display;
+        break;
+    }
+
+    displayText = displayText.replace(placeholder, replacement);
+  }
+
+  return displayText;
+}
+
+/**
  * onDocumentCreated trigger for messages
  * Creates todos for mentioned users in messages
  */
 export const onMessageCreated = onDocumentCreated(
   {
-    document: "organizations/{orgId}/conversations/{conversationId}/messages/{messageId}",
+    document:
+      "organizations/{orgId}/conversations/{conversationId}/messages/{messageId}",
     region: "us-central1",
     secrets: [openaiApiKey],
   },
@@ -68,7 +130,9 @@ export const onMessageCreated = onDocumentCreated(
 
     const messageData = event.data.data() as Message;
 
-    console.log(`Processing message ${messageId} in conversation ${conversationId}`);
+    console.log(
+      `Processing message ${messageId} in conversation ${conversationId}`
+    );
 
     // Extract mentions from message
     let userMentions = messageData.richText.resources
@@ -103,7 +167,9 @@ export const onMessageCreated = onDocumentCreated(
       .get();
 
     if (!todoDoc.exists) {
-      console.error(`Referenced todo ${conversationData.reference.id} not found`);
+      console.error(
+        `Referenced todo ${conversationData.reference.id} not found`
+      );
       return;
     }
 
@@ -140,11 +206,15 @@ export const onMessageCreated = onDocumentCreated(
       ).then((memberArrays) => memberArrays.flat());
 
       // Track these as todo-sourced mentions
-      [...todoUserMentions, ...todoTeamMemberIds].forEach(userId =>
+      [...todoUserMentions, ...todoTeamMemberIds].forEach((userId) =>
         todoMentionedUsers.add(userId)
       );
 
-      userMentions = [...userMentions, ...todoUserMentions, ...todoTeamMemberIds];
+      userMentions = [
+        ...userMentions,
+        ...todoUserMentions,
+        ...todoTeamMemberIds,
+      ];
       teamMentions = [...teamMentions, ...todoTeamMentions];
     }
 
@@ -152,7 +222,9 @@ export const onMessageCreated = onDocumentCreated(
     userMentions = [...new Set(userMentions)];
     teamMentions = [...new Set(teamMentions)];
 
-    console.log(`Found ${userMentions.length} user mentions and ${teamMentions.length} team mentions`);
+    console.log(
+      `Found ${userMentions.length} user mentions and ${teamMentions.length} team mentions`
+    );
 
     // If no mentions, exit early
     if (userMentions.length === 0 && teamMentions.length === 0) {
@@ -179,14 +251,18 @@ export const onMessageCreated = onDocumentCreated(
       .filter((resource: any) => resource.type === "user")
       .map((resource: any) => resource.userId);
 
-    [...directMessageMentions, ...messageTeamMemberIds].forEach(userId =>
+    [...directMessageMentions, ...messageTeamMemberIds].forEach((userId) =>
       messageMentionedUsers.add(userId)
     );
 
     // Combine user mentions and team members
-    const allMentionedUserIds = [...new Set([...userMentions, ...messageTeamMemberIds])];
+    const allMentionedUserIds = [
+      ...new Set([...userMentions, ...messageTeamMemberIds]),
+    ];
 
-    console.log(`Total ${allMentionedUserIds.length} users mentioned (after resolving teams)`);
+    console.log(
+      `Total ${allMentionedUserIds.length} users mentioned (after resolving teams)`
+    );
 
     // Get the todo creator
     const ownerUserId = todoData.userId;
@@ -209,94 +285,6 @@ export const onMessageCreated = onDocumentCreated(
     }
 
     const openai = createOpenAIClient();
-
-    // If multiple users were mentioned at once, generate one shared message
-    let sharedGeneratedRichText: z.infer<typeof RichTextSchema> | null = null;
-
-    if (mentionedUsersExcludingOwner.length > 1) {
-      console.log(
-        `Generating shared message for ${mentionedUsersExcludingOwner.length} users`
-      );
-
-      const originalRichText = todoData.richText;
-      const messageRichText = messageData.richText;
-
-      // Determine if this is primarily todo-based or message-based
-      const todoSourcedCount = mentionedUsersExcludingOwner.filter(userId =>
-        todoMentionedUsers.has(userId)
-      ).length;
-      const messageSourcedCount = mentionedUsersExcludingOwner.filter(userId =>
-        messageMentionedUsers.has(userId)
-      ).length;
-
-      const isFromTodo = todoSourcedCount > messageSourcedCount;
-
-      const prompt = `Generate a todo for users who were mentioned.
-
-## Context
-
-**Todo Creator:** ${ownerUserData.displayName} (ID: ${ownerUserId})
-
-**Original Todo:**
-Text: ${originalRichText.text}
-Resources: ${JSON.stringify(originalRichText.resources, null, 2)}
-
-**${isFromTodo ? 'First Message' : 'Message'} (trigger only):**
-Text: ${messageRichText.text}
-Resources: ${JSON.stringify(messageRichText.resources, null, 2)}
-
-## Important
-The generated todo will share the SAME CONVERSATION as the original todo. All messages are visible to everyone in the conversation. Don't duplicate message content in the generated todo.
-
-The original todo describes WHAT needs to be done. The message is just the trigger.
-
-## RichText Format
-Text uses placeholders [[0]], [[1]] that reference resources array.
-Resources: user mentions, tags, teams, tasks, links.
-
-## Instructions
-Create a todo with the correct perspective for the mentioned users.
-
-The todo creator is [[0]]:
-{
-  "type": "user",
-  "userId": "${ownerUserId}"
-}
-
-The mentioned users are the TARGET of the todo. Generate the todo FROM THEIR PERSPECTIVE.
-Start with "[[0]] needs you to..." or "[[0]] would like you to..."
-
-IMPORTANT: Do not include the target users' names in the generated todo - use "you" or "your" instead.
-
-Include relevant resources from the original todo (tags, tasks, links, etc).
-Don't add extra context - stay literal to the original todo.`;
-
-      const completion = await openai.chat.completions.parse({
-        model: "gpt-5-nano-2025-08-07",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a helpful assistant that generates structured RichText objects for todo items.",
-          },
-          { role: "user", content: prompt },
-        ],
-        response_format: zodResponseFormat(
-          RichTextSchema,
-          "RichTextResponse"
-        ),
-      });
-
-      sharedGeneratedRichText = completion.choices[0].message.parsed;
-
-      if (!sharedGeneratedRichText) {
-        throw new Error("Not able to generate shared todo rich text");
-      }
-
-      console.log(
-        `Generated shared message: ${sharedGeneratedRichText.text}`
-      );
-    }
 
     // Process each mentioned user
     await Promise.all(
@@ -330,87 +318,142 @@ Don't add extra context - stay literal to the original todo.`;
 
         let generatedRichText: z.infer<typeof RichTextSchema>;
 
-        // If we have a shared message, use it
-        if (sharedGeneratedRichText) {
-          generatedRichText = sharedGeneratedRichText;
-          console.log(
-            `Using shared message for user ${userId} (${participantUser.displayName})`
-          );
-        } else {
-          // Generate a personalized message for this specific user
-          const originalRichText = todoData.richText;
-          const messageRichText = messageData.richText;
+        // Convert RichText to plain display text for better LLM comprehension
+        const originalTodoText = await richTextToDisplayText(
+          todoData.richText,
+          db,
+          orgId
+        );
+        const messageText = await richTextToDisplayText(
+          messageData.richText,
+          db,
+          orgId
+        );
 
-          // Determine if this user is from todo or message
-          const isFromTodo = todoMentionedUsers.has(userId);
+        // Determine if this is a self-assigned task
+        const isSelfAssigned = todoData.userId === ownerUserId;
+        const todoOwnerName = isSelfAssigned
+          ? ownerUserData.displayName
+          : (await db.collection("organizations").doc(orgId).collection("users").doc(todoData.userId).get()).data()?.displayName || "Unknown";
 
-          const prompt = `Generate a todo for ${participantUser.displayName}.
+        const prompt = `Generate a todo for ${participantUser.displayName}.
 
 ## Context
 
-**Todo Creator:** ${ownerUserData.displayName} (ID: ${ownerUserId})
+**Original Todo Creator:** ${ownerUserData.displayName}
+**Original Todo Owner:** ${todoOwnerName}${isSelfAssigned ? " (self-assigned)" : ""}
 
 **Original Todo:**
-Text: ${originalRichText.text}
-Resources: ${JSON.stringify(originalRichText.resources, null, 2)}
+"${originalTodoText}"
 
-**${isFromTodo ? 'First Message' : 'Message'} (trigger only):**
-Text: ${messageRichText.text}
-Resources: ${JSON.stringify(messageRichText.resources, null, 2)}
+**Related Message:**
+"${messageText}"
 
-**Target User:** ${participantUser.displayName} (ID: ${userId})
+**Target User:** ${participantUser.displayName}
 
-## Important
-The generated todo will share the SAME CONVERSATION as the original todo. All messages are visible to everyone in the conversation. Don't duplicate message content in the generated todo.
+## Your Task: Transform the Perspective
 
-The original todo describes WHAT needs to be done. The message is just the trigger.
+The original todo was created by ${ownerUserData.displayName}${isSelfAssigned ? " for themselves" : ` for ${todoOwnerName}`}. You need to transform it into a todo FOR ${participantUser.displayName}.
 
-## RichText Format
-Text uses placeholders [[0]], [[1]] that reference resources array.
-Resources: user mentions, tags, teams, tasks, links.
+### Step 1: Understand the Context
 
-## Instructions
-Create a todo FROM THE PERSPECTIVE of ${participantUser.displayName}.
-
-The todo creator is [[0]]:
-{
-  "type": "user",
-  "userId": "${ownerUserId}",
-  "display": "${ownerUserData.displayName}"
+${isSelfAssigned
+  ? `This is a SELF-ASSIGNED task. ${ownerUserData.displayName} created this todo for themselves. When they mention ${participantUser.displayName}, they are asking for HELP or COLLABORATION, not delegating the entire task.`
+  : `This is a DELEGATED task. ${ownerUserData.displayName} created this todo for ${todoOwnerName}. Mentions may indicate task transfer or collaboration.`
 }
 
-${participantUser.displayName} is the TARGET. Generate what THEY need to do.
-Start with "[[0]] needs you to..." or "[[0]] would like you to..."
+### Step 2: Identify the Action Structure
 
-IMPORTANT: Replace any mention of "${participantUser.displayName}" with "you" or "your" - do NOT include them as a resource.
+Analyze the original todo and message to understand:
+- **Who owns the work?** (originally ${todoOwnerName})
+- **What is the action?** (the verb)
+- **What is the participant's role?** (helper, collaborator, or new owner)
 
-Include relevant resources from the original todo (tags, tasks, links, etc).
-Don't add extra context - stay literal to the original todo.`;
+### Step 3: Transform Based on the Scenario
 
-          const completion = await openai.chat.completions.parse({
-            model: "gpt-5-nano-2025-08-07",
-            messages: [
-              {
-                role: "system",
-                content:
-                  "You are a helpful assistant that generates structured RichText objects for todo items.",
-              },
-              { role: "user", content: prompt },
-            ],
-            response_format: zodResponseFormat(
-              RichTextSchema,
-              "RichTextResponse"
-            ),
-          });
+${isSelfAssigned
+  ? `**For Self-Assigned Tasks (asking for help):**
+- The participant should HELP with the task, not take it over
+- Rephrase as: "${ownerUserData.displayName} asked for your help with [action]"
+- Or: "${ownerUserData.displayName} needs your help to [action]"
+- Example: "Work on the feature" + "Can you help me?" → "${ownerUserData.displayName} asked for your help with working on the feature"`
+  : `**For Delegated Tasks:**
+- Determine if this is task transfer or collaboration
+- If transfer: "${ownerUserData.displayName} wants you to [action]"
+- If collaboration: "${ownerUserData.displayName} asked you to help with [action]"`
+}
 
-          const parsed = completion.choices[0].message.parsed;
+**If ${participantUser.displayName} is mentioned as the OBJECT (receiving action):**
+- Rephrase as: "${ownerUserData.displayName} wants to [action] you" or "${ownerUserData.displayName} will [action] you"
+- Example: "Schedule meeting with Tom" → "${ownerUserData.displayName} wants to schedule a meeting with you"
 
-          if (!parsed) {
-            throw new Error("Not able to generate todo rich text");
-          }
+### Step 4: Generate RichText Output
 
-          generatedRichText = parsed;
+- **ALWAYS include ${ownerUserData.displayName} as the first resource**: { type: "user", userId: "${ownerUserId}" }
+- Reference them as [[0]] in the text
+- Include any other resources (tags, users, teams, tasks, links) from the original todo
+- Adjust their indices (they shift by +1 since the creator is now [[0]])
+- Do NOT include ${participantUser.displayName} as a resource (they become "you")
+
+### Examples:
+
+**Example 1 - Self-Assigned Task (Help Request):**
+Original: "Fix the bug in authentication" (John's own task)
+Message: "Can you help me with this?"
+Generated for Mary:
+- Text: "[[0]] asked for your help with fixing the bug in authentication"
+- Resources: [{ type: "user", userId: "john-id" }]
+
+**Example 2 - Delegated Task:**
+Original: "Update the documentation" (assigned to Bob)
+Message: "Can you take this over?"
+Generated for Alice:
+- Text: "[[0]] wants you to update the documentation"
+- Resources: [{ type: "user", userId: "creator-id" }]
+
+**Example 3 - Participant as Object:**
+Original: "Schedule meeting with Tom"
+Generated for Tom:
+- Text: "[[0]] wants to schedule a meeting with you"
+- Resources: [{ type: "user", userId: "creator-id" }]
+
+**Example 4 - With Additional Resources:**
+Original: "Deploy #backend changes" (self-assigned)
+Message: "Need your help deploying"
+Generated for Sarah:
+- Text: "[[0]] asked for your help with deploying [[1]] changes"
+- Resources: [{ type: "user", userId: "creator-id" }, { type: "tag", tag: "backend" }]
+
+## Important Notes
+- Pay close attention to whether this is a self-assigned task (help request) or delegation
+- Use the message to understand the nature of the request
+- Focus on semantic meaning, not just word replacement
+- The message provides context but shouldn't be duplicated (same conversation)
+- ALWAYS make the creator [[0]] in resources`;
+
+        const completion = await openai.chat.completions.parse({
+          model: "gpt-5-nano-2025-08-07",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a helpful assistant that generates structured RichText objects for todo items.",
+            },
+            { role: "user", content: prompt },
+          ],
+          response_format: zodResponseFormat(
+            RichTextSchema,
+            "RichTextResponse"
+          ),
+        });
+
+        const parsed = completion.choices[0].message.parsed;
+
+        if (!parsed) {
+          throw new Error("Not able to generate todo rich text");
         }
+
+        generatedRichText = parsed;
 
         // Create the new todo document reference
         const newTodoRef = db

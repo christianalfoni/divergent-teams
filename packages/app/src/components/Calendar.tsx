@@ -84,245 +84,248 @@ export function Calendar() {
   const isExpanded = (index: number) =>
     state.showConversationDayIndex === index;
 
-  return () => (
-    <div className="flex-1 w-full flex flex-col overflow-hidden">
-      <div className="flex flex-1 min-h-0">
-        {weekdays.map((date, index) => (
-          <div
-            key={index}
-            ref={(el) => {
-              columnRefs[index] = el;
-            }}
-            className="flex flex-col bg-(--color-bg-secondary) border-r border-(--color-border-primary) last:border-r-0 overflow-hidden transition-all"
-            style={getColumnStyle(index)}
-            onClick={() => handleDayClick()}
-          >
-            {/* Day content area - always contains both todos and chat */}
-            <div className="flex h-full">
-              {/* Todo list with header - fixed initial column width */}
-              <div
-                className="flex-shrink-0 flex flex-col overflow-hidden"
-                style={{
-                  width: state.columnWidth ? `${state.columnWidth}px` : "auto",
-                }}
-              >
-                {/* Day header */}
-                <div className="p-4 flex-shrink-0">
-                  <div
-                    className={`flex items-center gap-2 text-sm font-medium ${
-                      index === currentDayIndex
-                        ? "text-(--color-accent-primary)"
-                        : "text-(--color-text-secondary)"
-                    }`}
-                  >
-                    <span>{dayNames[index]}</span>
-                    <span>{date.getDate()}</span>
+  return () =>
+    console.log(data.todos) || (
+      <div className="flex-1 w-full flex flex-col overflow-hidden">
+        <div className="flex flex-1 min-h-0">
+          {weekdays.map((date, index) => (
+            <div
+              key={index}
+              ref={(el) => {
+                columnRefs[index] = el;
+              }}
+              className="flex flex-col bg-(--color-bg-secondary) border-r border-(--color-border-primary) last:border-r-0 overflow-hidden transition-all"
+              style={getColumnStyle(index)}
+              onClick={() => handleDayClick()}
+            >
+              {/* Day content area - always contains both todos and chat */}
+              <div className="flex h-full">
+                {/* Todo list with header - fixed initial column width */}
+                <div
+                  className="flex-shrink-0 flex flex-col overflow-hidden"
+                  style={{
+                    width: state.columnWidth
+                      ? `${state.columnWidth}px`
+                      : "auto",
+                  }}
+                >
+                  {/* Day header */}
+                  <div className="p-4 flex-shrink-0">
+                    <div
+                      className={`flex items-center gap-2 text-sm font-medium ${
+                        index === currentDayIndex
+                          ? "text-(--color-accent-primary)"
+                          : "text-(--color-text-secondary)"
+                      }`}
+                    >
+                      <span>{dayNames[index]}</span>
+                      <span>{date.getDate()}</span>
+                    </div>
                   </div>
-                </div>
 
-                {/* Move incomplete focus button */}
-                {(isToday(date) || isNextMonday(date)) &&
-                  authentication.user &&
-                  derived.oldUncompletedTodos.length > 0 && (
-                    <button
-                      onClick={(e) => handleMoveIncompleteTodos(e)}
-                      className="px-3 py-2 flex items-center gap-3 text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
-                      style={{ "font-size": "var(--todo-text-size)" }}
-                    >
-                      <div className="flex h-5 w-4 shrink-0 items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={2}
-                          stroke="currentColor"
-                          className="w-4 h-4"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M3 9h11m0 0v11m-3-3l3 3m0 0l3-3"
-                          />
-                        </svg>
-                      </div>
-                      <span className="text-sm">Move incomplete todos</span>
-                    </button>
-                  )}
-
-                {/* Show requested todos button */}
-                {isToday(date) &&
-                  authentication.user &&
-                  derived.generatedTodos.length > 0 && (
-                    <button
-                      onClick={(e) => handleShowRequestedTodos(e)}
-                      className="px-3 py-2 flex items-center gap-3 text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
-                      style={{ "font-size": "var(--todo-text-size)" }}
-                    >
-                      <div className="flex h-5 w-4 shrink-0 items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={2}
-                          stroke="currentColor"
-                          className="w-4 h-4"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"
-                          />
-                        </svg>
-                      </div>
-                      <span className="text-sm">Show requested todos...</span>
-                    </button>
-                  )}
-
-                {/* Todos list */}
-                <div className="flex-1 overflow-y-auto">
-                  <div
-                    className={
-                      state.showConversationDayIndex !== null &&
-                      !isExpanded(index)
-                        ? "opacity-0"
-                        : "opacity-100"
-                    }
-                    style={{
-                      transition:
-                        "opacity 350ms cubic-bezier(0.4, 0.0, 0.2, 1)",
-                    }}
-                  >
-                    {authentication.isAuthenticating || data.isLoading ? (
-                      <TodosLoadingPlaceholder />
-                    ) : (
-                      derived.todosByDay[index].map((todo) => (
-                        <TodoItem
-                          key={todo.id}
-                          todo={todo}
-                          onToggleTodoComplete={() => {}}
-                          onClick={() => handleTodoClick(index, todo)}
-                          isActive={state.selectedTodo?.todoId === todo.id}
-                        />
-                      ))
+                  {/* Move incomplete focus button */}
+                  {(isToday(date) || isNextMonday(date)) &&
+                    authentication.user &&
+                    derived.oldUncompletedTodos.length > 0 && (
+                      <button
+                        onClick={(e) => handleMoveIncompleteTodos(e)}
+                        className="px-3 py-2 flex items-center gap-3 text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
+                        style={{ "font-size": "var(--todo-text-size)" }}
+                      >
+                        <div className="flex h-5 w-4 shrink-0 items-center justify-center">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                            stroke="currentColor"
+                            className="w-4 h-4"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M3 9h11m0 0v11m-3-3l3 3m0 0l3-3"
+                            />
+                          </svg>
+                        </div>
+                        <span className="text-sm">Move incomplete todos</span>
+                      </button>
                     )}
 
-                    {/* Add new todo button or editor */}
-                    {authentication.user &&
-                      !authentication.isAuthenticating &&
-                      !data.isLoading &&
-                      state.addingTodoDayIndex !== index && (
-                        <button
-                          onClick={(e) => handleAddTodoClick(e, index)}
-                          className="px-3 py-2 flex items-center gap-3 text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors w-full"
-                        >
-                          <div className="flex h-5 w-4 shrink-0 items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={2}
-                              stroke="currentColor"
-                              className="w-4 h-4"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M12 4.5v15m7.5-7.5h-15"
-                              />
-                            </svg>
-                          </div>
-                          <span className="text-sm">Add new todo...</span>
-                        </button>
+                  {/* Show requested todos button */}
+                  {isToday(date) &&
+                    authentication.user &&
+                    derived.generatedTodos.length > 0 && (
+                      <button
+                        onClick={(e) => handleShowRequestedTodos(e)}
+                        className="px-3 py-2 flex items-center gap-3 text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
+                        style={{ "font-size": "var(--todo-text-size)" }}
+                      >
+                        <div className="flex h-5 w-4 shrink-0 items-center justify-center">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                            stroke="currentColor"
+                            className="w-4 h-4"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"
+                            />
+                          </svg>
+                        </div>
+                        <span className="text-sm">Show requested todos...</span>
+                      </button>
+                    )}
+
+                  {/* Todos list */}
+                  <div className="flex-1 overflow-y-auto">
+                    <div
+                      className={
+                        state.showConversationDayIndex !== null &&
+                        !isExpanded(index)
+                          ? "opacity-0"
+                          : "opacity-100"
+                      }
+                      style={{
+                        transition:
+                          "opacity 350ms cubic-bezier(0.4, 0.0, 0.2, 1)",
+                      }}
+                    >
+                      {authentication.isAuthenticating || data.isLoading ? (
+                        <TodosLoadingPlaceholder />
+                      ) : (
+                        derived.todosByDay[index].map((todo) => (
+                          <TodoItem
+                            key={todo.id}
+                            todo={todo}
+                            onToggleTodoComplete={() => {}}
+                            onClick={() => handleTodoClick(index, todo)}
+                            isActive={state.selectedTodo?.todoId === todo.id}
+                          />
+                        ))
                       )}
 
-                    {/* Editor mode */}
-                    {state.addingTodoDayIndex === index && (
-                      <div className="px-3 py-2">
-                        <div className="flex gap-3">
-                          <div className="flex h-5 shrink-0 items-center">
-                            <div className="group/checkbox grid size-4 grid-cols-1">
-                              <input
-                                disabled
-                                type="checkbox"
-                                className="col-start-1 row-start-1 appearance-none rounded-sm border border-(--color-border-secondary) bg-(--color-bg-primary) disabled:border-(--color-border-secondary) disabled:bg-(--color-bg-secondary)"
-                              />
+                      {/* Add new todo button or editor */}
+                      {authentication.user &&
+                        !authentication.isAuthenticating &&
+                        !data.isLoading &&
+                        state.addingTodoDayIndex !== index && (
+                          <button
+                            onClick={(e) => handleAddTodoClick(e, index)}
+                            className="px-3 py-2 flex items-center gap-3 text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors w-full"
+                          >
+                            <div className="flex h-5 w-4 shrink-0 items-center justify-center">
                               <svg
+                                xmlns="http://www.w3.org/2000/svg"
                                 fill="none"
-                                viewBox="0 0 14 14"
-                                className="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-(--color-text-inverse) group-has-disabled/checkbox:stroke-(--color-text-secondary)"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2}
+                                stroke="currentColor"
+                                className="w-4 h-4"
                               >
                                 <path
-                                  d="M3 8L6 11L11 3.5"
-                                  strokeWidth={2}
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
-                                  className="opacity-0"
+                                  d="M12 4.5v15m7.5-7.5h-15"
                                 />
                               </svg>
                             </div>
-                          </div>
-                          <div
-                            className="flex-1 min-w-0 text-(--color-text-primary)"
-                            style={{ "font-size": "var(--todo-text-size)" }}
-                          >
-                            <SmartEditor
-                              apiRef={editorRefs[index]}
-                              initialValue={{ resources: [], text: "" }}
-                              onSubmit={(richText) => {
-                                // Clear and close editor
-                                editorRefs[index].current?.clear();
-                                state.addingTodoDayIndex = null;
+                            <span className="text-sm">Add new todo...</span>
+                          </button>
+                        )}
 
-                                if (richText.text) {
-                                  addTodo.add({
-                                    richText,
-                                    date,
-                                    position: "",
+                      {/* Editor mode */}
+                      {state.addingTodoDayIndex === index && (
+                        <div className="px-3 py-2">
+                          <div className="flex gap-3">
+                            <div className="flex h-5 shrink-0 items-center">
+                              <div className="group/checkbox grid size-4 grid-cols-1">
+                                <input
+                                  disabled
+                                  type="checkbox"
+                                  className="col-start-1 row-start-1 appearance-none rounded-sm border border-(--color-border-secondary) bg-(--color-bg-primary) disabled:border-(--color-border-secondary) disabled:bg-(--color-bg-secondary)"
+                                />
+                                <svg
+                                  fill="none"
+                                  viewBox="0 0 14 14"
+                                  className="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-(--color-text-inverse) group-has-disabled/checkbox:stroke-(--color-text-secondary)"
+                                >
+                                  <path
+                                    d="M3 8L6 11L11 3.5"
+                                    strokeWidth={2}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="opacity-0"
+                                  />
+                                </svg>
+                              </div>
+                            </div>
+                            <div
+                              className="flex-1 min-w-0 text-(--color-text-primary)"
+                              style={{ "font-size": "var(--todo-text-size)" }}
+                            >
+                              <SmartEditor
+                                apiRef={editorRefs[index]}
+                                initialValue={{ resources: [], text: "" }}
+                                onSubmit={(richText) => {
+                                  // Clear and close editor
+                                  editorRefs[index].current?.clear();
+                                  state.addingTodoDayIndex = null;
+
+                                  if (richText.text) {
+                                    addTodo.add({
+                                      richText,
+                                      date,
+                                      position: "",
+                                    });
+                                  }
+                                }}
+                                placeholder="Description..."
+                                focus={true}
+                                onKeyDown={(e) => handleEditorKeyDown(e, index)}
+                                onBlur={() => handleEditorBlur(index)}
+                                availableTags={[]}
+                                onMention={(api) => {
+                                  searchPalette.open((mention) => {
+                                    if (state.addingTodoDayIndex !== index) {
+                                      return;
+                                    }
+
+                                    if (!mention) {
+                                      api.cancelMention();
+                                      return;
+                                    }
+
+                                    api.insertMention(mention);
                                   });
-                                }
-                              }}
-                              placeholder="Description..."
-                              focus={true}
-                              onKeyDown={(e) => handleEditorKeyDown(e, index)}
-                              onBlur={() => handleEditorBlur(index)}
-                              availableTags={[]}
-                              onMention={(api) => {
-                                searchPalette.open((mention) => {
-                                  if (state.addingTodoDayIndex !== index) {
-                                    return;
-                                  }
-
-                                  if (!mention) {
-                                    api.cancelMention();
-                                    return;
-                                  }
-
-                                  api.insertMention(mention);
-                                });
-                              }}
-                            />
+                                }}
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Chat interface - shows when chat state exists */}
-              {state.selectedTodo?.dayIndex === index ? (
-                <TodoConversation
-                  key={state.selectedTodo.todoId}
-                  width={state.chatWidth}
-                  todo={state.selectedTodo.todo}
-                />
-              ) : null}
+                {/* Chat interface - shows when chat state exists */}
+                {state.selectedTodo?.dayIndex === index ? (
+                  <TodoConversation
+                    key={state.selectedTodo.todoId}
+                    width={state.chatWidth}
+                    todo={state.selectedTodo.todo}
+                  />
+                ) : null}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
 
   // Handle todo click
   function handleTodoClick(dayIndex: number, todo: any) {
